@@ -2,6 +2,30 @@
 
 package com.github.rossdanderson.backlight
 
+import com.fazecast.jSerialComm.SerialPort
+import com.fazecast.jSerialComm.SerialPortEvent
+import com.fazecast.jSerialComm.SerialPortMessageListener
+import java.nio.charset.Charset
+
+fun SerialPort.addDataListener(
+    types: Int,
+    function: (SerialPortEvent) -> Unit
+) {
+    addDataListener(
+        object : SerialPortMessageListener {
+            override fun delimiterIndicatesEndOfMessage(): Boolean = true
+
+            override fun getMessageDelimiter(): ByteArray = "\n".toByteArray(Charset.forName("ASCII"))
+
+            override fun serialEvent(event: SerialPortEvent) {
+                function(event)
+            }
+
+            override fun getListeningEvents(): Int = types
+        }
+    )
+}
+
 fun UByteArray.cobsEncode(): UByteArray {
     var readIndex = 0
     var writeIndex = 1
