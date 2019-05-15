@@ -11,9 +11,6 @@ import java.awt.Color
 import java.awt.Rectangle
 import java.awt.Robot
 import java.awt.Toolkit
-import java.awt.image.BufferedImage
-import java.lang.Integer.max
-import java.lang.Integer.min
 import java.nio.charset.Charset
 import java.time.Duration
 import java.time.Instant
@@ -27,10 +24,10 @@ private const val contrastFactor: Double = (259.0 * (contrast + 255.0)) / (255.0
 
 
 fun Int.applySaturation(greyscaleLuminosity: Double): Int =
-    max(0, min(255, (alpha * this + (1.0 - alpha) * greyscaleLuminosity).toInt()))
+    maxOf(0, minOf(255, (alpha * this + (1.0 - alpha) * greyscaleLuminosity).toInt()))
 
 fun Int.applyContrast(): Int =
-    max(0, min((contrastFactor * (this - 128) + 128).toInt(), 255))
+    maxOf(0, minOf((contrastFactor * (this - 128) + 128).toInt(), 255))
 
 /*
 Message headers
@@ -197,12 +194,16 @@ fun main() = runBlocking {
                     blue += color.blue
                 }
 
+                val redAvg = (red / count).toUByte()
+                val greenAvg = (green / count).toUByte()
+                val blueAvg = (blue / count).toUByte()
+
                 WriteLEDMessage(
                     index.toUByte(),
-                    (red / count).toUByte(),
-                    (green / count).toUByte(),
-                    (blue / count).toUByte(),
-                    0.toUByte()
+                    redAvg,
+                    greenAvg,
+                    blueAvg,
+                    minOf(redAvg, greenAvg, blueAvg)
                 )
             }
             .sequential()
