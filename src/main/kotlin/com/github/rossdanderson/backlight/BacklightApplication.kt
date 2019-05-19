@@ -15,13 +15,13 @@ import java.nio.charset.Charset
 import java.time.Duration
 import java.time.Instant
 import kotlin.Result.Companion.success
+import kotlin.math.sqrt
 import kotlin.streams.asSequence
 import kotlin.streams.asStream
 
 private const val alpha = 2.0
 private const val contrast = 10.0
 private const val contrastFactor: Double = (259.0 * (contrast + 255.0)) / (255.0 * (259.0 - contrast))
-
 
 fun Int.applySaturation(greyscaleLuminosity: Double): Int =
     maxOf(0, minOf(255, (alpha * this + (1.0 - alpha) * greyscaleLuminosity).toInt()))
@@ -61,6 +61,11 @@ inline class WriteLEDMessage(
 }
 
 fun main() = runBlocking {
+    val leds = 12
+    val gridHeight = sqrt(leds.toDouble()).toInt()
+    val gridWidth = leds / gridHeight
+
+    println("$gridHeight $gridWidth")
 
     val serialPort = selectSerialPort()
     serialPort.addDataListener(LISTENING_EVENT_DATA_RECEIVED) {
@@ -97,77 +102,53 @@ fun main() = runBlocking {
      */
 
     val screenSections = listOf(
-        createIndices(
-            0,
-            0,
-            sideRowWidth,
-            sideRowHeight
+        IntRange2D(
+            xRange = createIndices(0, sideRowWidth),
+            yRange = createIndices(0, sideRowHeight)
         ),
-        createIndices(
-            sideRowWidth,
-            0,
-            midRowWidth,
-            midRowHeight
+        IntRange2D(
+            xRange = createIndices(sideRowWidth, midRowWidth),
+            yRange = createIndices(0, midRowHeight)
         ),
-        createIndices(
-            sideRowWidth + midRowWidth,
-            0,
-            midRowWidth,
-            midRowHeight
+        IntRange2D(
+            xRange = createIndices(sideRowWidth + midRowWidth, midRowWidth),
+            yRange = createIndices(0, midRowHeight)
         ),
-        createIndices(
-            sideRowWidth + midRowWidth + midRowWidth,
-            0,
-            midRowWidth,
-            midRowHeight
+        IntRange2D(
+            xRange = createIndices(sideRowWidth + midRowWidth + midRowWidth, midRowWidth),
+            yRange = createIndices(0, midRowHeight)
         ),
-        createIndices(
-            sideRowWidth + midRowWidth + midRowWidth + midRowWidth,
-            0,
-            sideRowWidth,
-            sideRowHeight
+        IntRange2D(
+            xRange = createIndices(sideRowWidth + midRowWidth + midRowWidth + midRowWidth, sideRowWidth),
+            yRange = createIndices(0, sideRowHeight)
         ),
-        createIndices(
-            sideRowWidth + midRowWidth + midRowWidth + midRowWidth,
-            sideRowHeight,
-            sideRowWidth,
-            sideRowHeight
+        IntRange2D(
+            xRange = createIndices(sideRowWidth + midRowWidth + midRowWidth + midRowWidth, sideRowWidth),
+            yRange = createIndices(sideRowHeight, sideRowHeight)
         ),
-        createIndices(
-            sideRowWidth + midRowWidth + midRowWidth + midRowWidth,
-            sideRowHeight + sideRowHeight,
-            sideRowWidth,
-            sideRowHeight
+        IntRange2D(
+            xRange = createIndices(sideRowWidth + midRowWidth + midRowWidth + midRowWidth, sideRowWidth),
+            yRange = createIndices(sideRowHeight + sideRowHeight, sideRowHeight)
         ),
-        createIndices(
-            sideRowWidth + midRowWidth + midRowWidth,
-            midRowHeight,
-            midRowWidth,
-            midRowHeight
+        IntRange2D(
+            xRange = createIndices(sideRowWidth + midRowWidth + midRowWidth, midRowWidth),
+            yRange = createIndices(midRowHeight, midRowHeight)
         ),
-        createIndices(
-            sideRowWidth + midRowWidth,
-            midRowHeight,
-            midRowWidth,
-            midRowHeight
+        IntRange2D(
+            xRange = createIndices(sideRowWidth + midRowWidth, midRowWidth),
+            yRange = createIndices(midRowHeight, midRowHeight)
         ),
-        createIndices(
-            sideRowWidth,
-            midRowHeight,
-            midRowWidth,
-            midRowHeight
+        IntRange2D(
+            xRange = createIndices(sideRowWidth, midRowWidth),
+            yRange = createIndices(midRowHeight, midRowHeight)
         ),
-        createIndices(
-            0,
-            sideRowHeight + sideRowHeight,
-            sideRowWidth,
-            sideRowHeight
+        IntRange2D(
+            xRange = createIndices(0, sideRowWidth),
+            yRange = createIndices(sideRowHeight + sideRowHeight, sideRowHeight)
         ),
-        createIndices(
-            0,
-            sideRowHeight,
-            sideRowWidth,
-            sideRowHeight
+        IntRange2D(
+            xRange = createIndices(0, sideRowWidth),
+            yRange = createIndices(sideRowHeight, sideRowHeight)
         )
     )
 
@@ -283,8 +264,5 @@ data class IntRange2D(
         xRange.forEach { x -> yRange.forEach { y -> function(x, y) } }
     }
 }
-
-fun createIndices(x: Int, y: Int, xWidth: Int, yWidth: Int): IntRange2D =
-    IntRange2D(createIndices(x, xWidth), createIndices(y, yWidth))
 
 fun createIndices(start: Int, length: Int): IntRange = start until (start + length)
