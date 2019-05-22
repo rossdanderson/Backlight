@@ -38,13 +38,3 @@ class Array2D<T>(
         array.forEachIndexed { x, innerArray -> innerArray.forEachIndexed { y, t -> operation.invoke(x, y, t) } }
     }
 }
-
-/**
- * 'from' is inclusive, 'to' is exclusive
- */
-inline fun <reified T> Array2D<T>.sliceArray2D(xIndices: IntRange, yIndices: IntRange): Array2D<T> =
-    Array2D(xIndices.last - xIndices.first, yIndices.last - yIndices.first) { xIndex, yIndex ->
-        val x = xIndex + xIndices.first
-        val y = yIndex + yIndices.first
-        this[x, y]
-    }

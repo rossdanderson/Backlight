@@ -3,11 +3,12 @@
 package com.github.rossdanderson.backlight
 
 import com.fazecast.jSerialComm.SerialPort
-import com.fazecast.jSerialComm.SerialPort.LISTENING_EVENT_DATA_RECEIVED
-import com.fazecast.jSerialComm.SerialPort.getCommPorts
-import kotlinx.coroutines.delay
+import com.fazecast.jSerialComm.SerialPort.*
+import com.github.rossdanderson.backlight.messages.Message
+import com.github.rossdanderson.backlight.messages.WriteAllMessage
+import com.github.rossdanderson.backlight.messages.writeAll
+import com.github.rossdanderson.backlight.messages.writeLED
 import kotlinx.coroutines.runBlocking
-import java.awt.Color
 import java.awt.Rectangle
 import java.awt.Robot
 import java.awt.Toolkit
@@ -15,59 +16,16 @@ import java.nio.charset.Charset
 import java.time.Duration
 import java.time.Instant
 import kotlin.Result.Companion.success
-import kotlin.math.sqrt
-import kotlin.streams.asSequence
-import kotlin.streams.asStream
+import kotlin.streams.toList
 
-private const val alpha = 2.0
-private const val contrast = 10.0
-private const val contrastFactor: Double = (259.0 * (contrast + 255.0)) / (255.0 * (259.0 - contrast))
-
-fun Int.applySaturation(greyscaleLuminosity: Double): Int =
-    maxOf(0, minOf(255, (alpha * this + (1.0 - alpha) * greyscaleLuminosity).toInt()))
-
-fun Int.applyContrast(): Int =
-    maxOf(0, minOf((contrastFactor * (this - 128) + 128).toInt(), 255))
-
-/*
-Message headers
- */
-private const val writeLED: UByte = 0u
-// TODO handshake, heartbeats, reconnection
-
-interface Message {
-    val backingArray: UByteArray
-}
-
-inline class WriteLEDMessage(
-    override val backingArray: UByteArray
-) : Message {
-    constructor(
-        index: UByte,
-        red: UByte,
-        green: UByte,
-        blue: UByte,
-        white: UByte
-    ) : this(
-        ubyteArrayOf(
-            writeLED,
-            index,
-            red,
-            green,
-            blue,
-            white
-        )
-    )
-}
+private const val ledCount = 60
 
 fun main() = runBlocking {
-    val leds = 12
-    val gridHeight = sqrt(leds.toDouble()).toInt()
-    val gridWidth = leds / gridHeight
-
-    println("$gridHeight $gridWidth")
+    println("Write LED ($writeLED) messages will be ${3 + 1} bytes")
+    println("Write all ($writeAll) messages will be ${ledCount * 3 + 1} bytes")
 
     val serialPort = selectSerialPort()
+
     serialPort.addDataListener(LISTENING_EVENT_DATA_RECEIVED) {
         val message = it.receivedData!!.toString(Charset.forName("ASCII")).dropLast(1)
         if (message.contains("ignoring", ignoreCase = true)) {
@@ -86,149 +44,66 @@ fun main() = runBlocking {
 
     println("Screen dimensions: $width x $height")
 
-    val sideRowWidth = width / 4
-    val midRowWidth = width / 4 * 2 / 3
-    val sideRowHeight = height / 3
-    val midRowHeight = height / 2
+    val sampleHeight = 256
+    val sampleWidth = (width.toDouble() / ledCount.toDouble()).toInt()
 
-    /*
-     __ __ __ __ __
-    | 1| 2| 3| 4| 5|
-    |__|  |  |  |__|
-    |12|__|__|__| 6|
-    |__|10| 9| 8|__|
-    |11|  |  |  | 7|
-    |__|__|__|__|__|
-     */
-
-    val screenSections = listOf(
+    val screenSections = (0 until ledCount).map {
         IntRange2D(
-            xRange = createIndices(0, sideRowWidth),
-            yRange = createIndices(0, sideRowHeight)
-        ),
-        IntRange2D(
-            xRange = createIndices(sideRowWidth, midRowWidth),
-            yRange = createIndices(0, midRowHeight)
-        ),
-        IntRange2D(
-            xRange = createIndices(sideRowWidth + midRowWidth, midRowWidth),
-            yRange = createIndices(0, midRowHeight)
-        ),
-        IntRange2D(
-            xRange = createIndices(sideRowWidth + midRowWidth + midRowWidth, midRowWidth),
-            yRange = createIndices(0, midRowHeight)
-        ),
-        IntRange2D(
-            xRange = createIndices(sideRowWidth + midRowWidth + midRowWidth + midRowWidth, sideRowWidth),
-            yRange = createIndices(0, sideRowHeight)
-        ),
-        IntRange2D(
-            xRange = createIndices(sideRowWidth + midRowWidth + midRowWidth + midRowWidth, sideRowWidth),
-            yRange = createIndices(sideRowHeight, sideRowHeight)
-        ),
-        IntRange2D(
-            xRange = createIndices(sideRowWidth + midRowWidth + midRowWidth + midRowWidth, sideRowWidth),
-            yRange = createIndices(sideRowHeight + sideRowHeight, sideRowHeight)
-        ),
-        IntRange2D(
-            xRange = createIndices(sideRowWidth + midRowWidth + midRowWidth, midRowWidth),
-            yRange = createIndices(midRowHeight, midRowHeight)
-        ),
-        IntRange2D(
-            xRange = createIndices(sideRowWidth + midRowWidth, midRowWidth),
-            yRange = createIndices(midRowHeight, midRowHeight)
-        ),
-        IntRange2D(
-            xRange = createIndices(sideRowWidth, midRowWidth),
-            yRange = createIndices(midRowHeight, midRowHeight)
-        ),
-        IntRange2D(
-            xRange = createIndices(0, sideRowWidth),
-            yRange = createIndices(sideRowHeight + sideRowHeight, sideRowHeight)
-        ),
-        IntRange2D(
-            xRange = createIndices(0, sideRowWidth),
-            yRange = createIndices(sideRowHeight, sideRowHeight)
+            xRange = offsetIntRange(it * sampleWidth, sampleWidth),
+            yRange = offsetIntRange(height - sampleHeight, sampleHeight)
         )
-    )
+    }
 
     while (true) {
         val start = Instant.now()
         val screenCapture = captureScreen(robot, screenRect)
 
-        screenSections.asSequence()
-            .mapIndexed { index, pair -> index to pair }
-            .asStream()
+        screenSections
+            .stream()
             .parallel()
-            .map { (index, intRange2d) ->
-
+            .map { intRange2d ->
                 var red = 0
                 var green = 0
                 var blue = 0
                 var count = 0
 
                 intRange2d.forEach { x, y ->
-                    val color = screenCapture[x, y]
+                    val rgb = screenCapture[x, y]
+                    val greyscaleLuminosity = rgb.greyscaleLuminosity()
+                    red += rgb.red.applySaturation(greyscaleLuminosity).applyContrast()
+                    green += rgb.green.applySaturation(greyscaleLuminosity).applyContrast()
+                    blue += rgb.blue.applySaturation(greyscaleLuminosity).applyContrast()
                     count++
-                    red += color.red
-                    green += color.green
-                    blue += color.blue
                 }
 
                 val redAvg = (red / count).toUByte()
                 val greenAvg = (green / count).toUByte()
                 val blueAvg = (blue / count).toUByte()
 
-                WriteLEDMessage(
-                    index.toUByte(),
-                    redAvg,
-                    greenAvg,
-                    blueAvg,
-                    minOf(redAvg, greenAvg, blueAvg)
-                )
+                Color(redAvg, greenAvg, blueAvg)
             }
             .sequential()
-            .asSequence()
-            .forEach { serialPort.writeMessage(it) }
+            .toList()
+            .let { serialPort.writeMessage(WriteAllMessage.from(ledCount, it)) }
+
         println("Full update took: ${Duration.between(start, Instant.now()).toMillis()}ms")
 
         // TODO need to implement ACKs/Semaphores so we don't overload the ESP and drop messages
-        delay(200)
     }
 }
 
-private fun captureScreen(robot: Robot, screenRect: Rectangle): Array2D<Color> {
+private fun captureScreen(robot: Robot, screenRect: Rectangle): FastRGB {
     val captureStart = Instant.now()
     val screenCapture = FastRGB(robot.createScreenCapture(screenRect))
     println("Capture took :${Duration.between(captureStart, Instant.now()).toMillis()}ms")
 
-    val simpleProcessingStart = Instant.now()
-    val saturatedCaptureArray2D = Array2D(screenRect.width, screenRect.height) { x, y ->
-
-        val rgb = screenCapture.getRGB(x, y)
-
-        val red = rgb.red
-        val green = rgb.green
-        val blue = rgb.blue
-
-        val greyscaleLuminosity = red * 0.299 + green * 0.587 + blue * 0.114
-
-        val r = red.applySaturation(greyscaleLuminosity).applyContrast()
-        val g = green.applySaturation(greyscaleLuminosity).applyContrast()
-        val b = blue.applySaturation(greyscaleLuminosity).applyContrast()
-
-        Color(r, g, b)
-    }
-
-    println("Simple processing took :${Duration.between(simpleProcessingStart, Instant.now()).toMillis()}ms")
-
-    return saturatedCaptureArray2D
+    return screenCapture
 }
 
 private fun SerialPort.writeMessage(message: Message) {
     val encoded = message.backingArray.cobsEncode().toByteArray()
     val bytes = encoded + 0u.toUByte().toByte()
-    writeBytes(bytes, bytes.size.toLong())
+    if (writeBytes(bytes, bytes.size.toLong()) == -1) throw IllegalStateException("Failure to write")
 }
 
 private tailrec fun selectSerialPort(): SerialPort {
@@ -250,19 +125,16 @@ private tailrec fun selectSerialPort(): SerialPort {
     }
 
     return result
-        .mapCatching { it.apply { if (!it.openPort()) throw IllegalStateException("Unable to connect") } }
+        .mapCatching {
+            it.apply {
+                baudRate = 115200
+                setComPortTimeouts(TIMEOUT_WRITE_BLOCKING, 1000, 1000)
+                if (!openPort()) throw IllegalStateException("Unable to connect")
+            }
+        }
         .onSuccess { println("Connected to ${it.descriptivePortName}") }
         .onFailure(Throwable::printStackTrace)
         .getOrNull() ?: selectSerialPort()
 }
 
-data class IntRange2D(
-    val xRange: IntRange,
-    val yRange: IntRange
-) {
-    inline fun forEach(function: (x: Int, y: Int) -> Unit) {
-        xRange.forEach { x -> yRange.forEach { y -> function(x, y) } }
-    }
-}
-
-fun createIndices(start: Int, length: Int): IntRange = start until (start + length)
+fun offsetIntRange(start: Int, length: Int): IntRange = start until (start + length)

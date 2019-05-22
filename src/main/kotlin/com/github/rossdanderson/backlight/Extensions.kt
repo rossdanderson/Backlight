@@ -5,6 +5,7 @@ package com.github.rossdanderson.backlight
 import com.fazecast.jSerialComm.SerialPort
 import com.fazecast.jSerialComm.SerialPortEvent
 import com.fazecast.jSerialComm.SerialPortMessageListener
+import java.awt.Color
 import java.nio.charset.Charset
 
 fun SerialPort.addDataListener(
@@ -25,6 +26,18 @@ fun SerialPort.addDataListener(
         }
     )
 }
+
+private const val alpha = 2.0
+private const val contrast = 10.0
+private const val contrastFactor: Double = (259.0 * (contrast + 255.0)) / (255.0 * (259.0 - contrast))
+
+fun Int.applySaturation(greyscaleLuminosity: Double): Int =
+    maxOf(0, minOf(255, (alpha * this + (1.0 - alpha) * greyscaleLuminosity).toInt()))
+
+fun Int.applyContrast(): Int =
+    maxOf(0, minOf((contrastFactor * (this - 128) + 128).toInt(), 255))
+
+fun Color.greyscaleLuminosity() = red * 0.299 + green * 0.587 + blue * 0.114
 
 fun UByteArray.cobsEncode(): UByteArray {
     var readIndex = 0

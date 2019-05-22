@@ -7,15 +7,7 @@ import java.awt.image.DataBufferInt
 class FastRGB(image: BufferedImage) {
 
     private val width: Int = image.width
-    private var pixelLength: Int = 0
     private val pixels: IntArray = (image.raster.dataBuffer as DataBufferInt).data
 
-    init {
-        pixelLength = 1
-    }
-
-    fun getRGB(x: Int, y: Int): Color {
-        val pos = y * width + x
-        return Color(pixels[pos])
-    }
+    operator fun get(x: Int, y: Int): Color = Color(pixels[y * width + x])
 }
