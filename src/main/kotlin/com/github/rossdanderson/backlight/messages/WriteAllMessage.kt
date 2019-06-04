@@ -17,7 +17,7 @@ inline class WriteAllMessage(
             uByteArray[0] = writeAll
             colors.forEachIndexed { ledIndex, color ->
                 color.rgb.forEachIndexed { colorIndex, j ->
-                    uByteArray[(ledIndex * 3) + colorIndex] = j
+                    uByteArray[(ledIndex * 3) + 1 + colorIndex] = j
                 }
             }
             return WriteAllMessage(uByteArray)

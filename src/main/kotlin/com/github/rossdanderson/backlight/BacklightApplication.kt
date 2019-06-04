@@ -101,7 +101,9 @@ private fun captureScreen(robot: Robot, screenRect: Rectangle): FastRGB {
 }
 
 private fun SerialPort.writeMessage(message: Message) {
-    val encoded = message.backingArray.cobsEncode().toByteArray()
+    val backingArray = message.backingArray
+    println("Writing bytes ${backingArray.contentToString()}")
+    val encoded = backingArray.cobsEncode().toByteArray()
     val bytes = encoded + 0u.toUByte().toByte()
     if (writeBytes(bytes, bytes.size.toLong()) == -1) throw IllegalStateException("Failure to write")
 }

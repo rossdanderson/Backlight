@@ -27,8 +27,8 @@ fun SerialPort.addDataListener(
     )
 }
 
-private const val alpha = 2.0
-private const val contrast = 10.0
+private const val alpha = 1.5
+private const val contrast = 7.0
 private const val contrastFactor: Double = (259.0 * (contrast + 255.0)) / (255.0 * (259.0 - contrast))
 
 fun Int.applySaturation(greyscaleLuminosity: Double): Int =

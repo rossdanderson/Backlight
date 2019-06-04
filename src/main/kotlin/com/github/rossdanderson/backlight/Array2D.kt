@@ -3,8 +3,8 @@ package com.github.rossdanderson.backlight
 class Array2D<T>(
     val array: Array<Array<T>>
 ) {
-    val xSize = array.size
-    val ySize = if (xSize == 0) 0 else array[0].size
+    val xSize: Int = array.size
+    val ySize: Int = if (xSize == 0) 0 else array[0].size
 
     companion object {
 
