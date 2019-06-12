@@ -1,6 +1,3 @@
-import org.gradle.api.JavaVersion.VERSION_12
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     kotlin("jvm") version "1.3.31"
     id("org.javamodularity.moduleplugin") version "1.5.0"
@@ -24,17 +21,33 @@ java {
 
 javafx {
     version = "12.0.1"
-    modules("javafx.controls")
+    modules(
+        "javafx.controls",
+        "javafx.fxml",
+        "javafx.media",
+        "javafx.web",
+        "javafx.swing"
+    )
 }
 
 repositories {
     mavenCentral()
+    maven("https://oss.sonatype.org/content/repositories/snapshots")
 }
+
+val kotlinCoroutinesVersion = "1.2.1"
+val javaFXVersion = "12.0.1"
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.2.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-javafx:$kotlinCoroutinesVersion")
     implementation("com.fazecast:jSerialComm:2.5.1")
+    implementation("no.tornado:tornadofx:2.0.0-SNAPSHOT")
+//    implementation("org.openjfx:javafx-swing:$javaFXVersion")
+//    implementation("org.openjfx:javafx-web:$javaFXVersion")
+//    implementation("org.openjfx:javafx-fxml:$javaFXVersion")
+
 }
 
 val compileKotlin: KotlinCompile by tasks

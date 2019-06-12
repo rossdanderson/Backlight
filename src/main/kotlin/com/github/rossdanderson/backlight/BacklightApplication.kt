@@ -8,7 +8,17 @@ import com.github.rossdanderson.backlight.messages.Message
 import com.github.rossdanderson.backlight.messages.WriteAllMessage
 import com.github.rossdanderson.backlight.messages.writeAll
 import com.github.rossdanderson.backlight.messages.writeLED
+import javafx.beans.property.SimpleListProperty
+import javafx.scene.Node
+import javafx.scene.Parent
+import javafx.scene.input.MouseEvent
+import javafx.stage.Stage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import tornadofx.*
 import java.awt.Rectangle
 import java.awt.Robot
 import java.awt.Toolkit
@@ -18,9 +28,88 @@ import java.time.Instant
 import kotlin.Result.Companion.success
 import kotlin.streams.toList
 
+private const val defaultSerialPort = "serial.port.default"
 private const val ledCount = 60
 
+private const val PORT = "PORT"
+
+class MyController : Controller() {
+    val portSelectScreen by inject<PortSelectScreen>()
+    val mainScreen by inject<MainScreen>()
+
+    fun init() {
+        with(config) {
+
+            if (containsKey(PORT)) {
+
+            } else {
+                showPortSelectScreen()
+            }
+        }
+    }
+
+    fun showPortSelectScreen() {
+        mainScreen.replaceWith(portSelectScreen, sizeToScene = true, centerOnScreen = true)
+    }
+}
+
+class MyApp : App(PortSelectScreen::class) {
+    val portSelectController by inject<MyController>()
+
+    override fun start(stage: Stage) {
+        super.start(stage)
+        portSelectController.init()
+    }
+}
+
+class MainScreen : View() {
+    override val root = borderpane {
+        center = vbox {
+            label("Main screen")
+        }
+    }
+}
+
+class PortSelectScreen : View("Please log in") {
+
+    private val listProperty = SimpleListProperty<String>()
+
+    private suspend fun refresh() {
+        withContext(Dispatchers.Default) {
+            
+        }
+    }
+
+    override val root = borderpane {
+        center = vbox {
+            label("Select a port to use:")
+            listview(listProperty) {
+                onUserSelect {
+
+                }
+            }
+            button("Ok")
+            button("Refresh") {
+                onClick {
+                    refresh()
+                }
+            }
+        }
+    }
+}
+
+fun Node.onClick(action: suspend (MouseEvent) -> Unit) {
+    val eventActor = GlobalScope.actor<MouseEvent>(Dispatchers.Main) {
+        for (event in channel) action(event)
+    }
+    setOnMouseClicked {
+        eventActor.offer(it)
+    }
+}
+
 fun main() = runBlocking {
+    launch<MyApp>()
+
     println("Write LED ($writeLED) messages will be ${3 + 1} bytes")
     println("Write all ($writeAll) messages will be ${ledCount * 3 + 1} bytes")
 

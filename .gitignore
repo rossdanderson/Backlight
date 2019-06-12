@@ -53,6 +53,7 @@ drag_handle
 .gradle
 /build/
 /out/
+/config/
 
 # Ignore Gradle GUI config
 gradle-app.setting
