@@ -1,6 +1,8 @@
 package com.github.rossdanderson.backlight.ui
 
 import com.github.rossdanderson.backlight.ofType
+import com.github.rossdanderson.backlight.ui.PortSelectViewModel.PortSelectEvent.CloseEvent
+import com.github.rossdanderson.backlight.ui.PortSelectViewModel.PortSelectEvent.ConnectionFailedAlertEvent
 import com.github.rossdanderson.backlight.ui.base.BaseView
 import javafx.geometry.Pos.CENTER
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,11 +19,11 @@ class PortSelectView : BaseView("Port Select") {
 
     init {
         launch {
-            portDetailsViewModel.receive.ofType<PortSelectViewModel.PortSelectEvent.ConnectionFailedAlertEvent>()
+            portDetailsViewModel.receive.ofType<ConnectionFailedAlertEvent>()
                 .collect { close() }
         }
         launch {
-            portDetailsViewModel.receive.ofType<PortSelectViewModel.PortSelectEvent.CloseEvent>().collect { close() }
+            portDetailsViewModel.receive.ofType<CloseEvent>().collect { close() }
         }
     }
 

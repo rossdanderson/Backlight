@@ -4,9 +4,7 @@ import com.github.rossdanderson.backlight.serial.ConnectResult
 import com.github.rossdanderson.backlight.serial.ISerialService
 import com.github.rossdanderson.backlight.ui.base.BaseViewModel
 import com.github.rossdanderson.backlight.ui.command.command
-import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlyListProperty
-import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleListProperty
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -28,9 +26,6 @@ class PortSelectViewModel : BaseViewModel() {
 
     private val _ports: SimpleListProperty<String> = SimpleListProperty()
     val ports: ReadOnlyListProperty<String> = _ports
-
-    private val _connecting = SimpleBooleanProperty(false)
-    val connecting: ReadOnlyBooleanProperty = _connecting
 
     lateinit var subscriptionsJob: Job
 

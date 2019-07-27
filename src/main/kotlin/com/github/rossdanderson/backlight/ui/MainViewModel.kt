@@ -15,8 +15,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 @ExperimentalCoroutinesApi
@@ -40,8 +38,7 @@ class MainViewModel : BaseViewModel() {
             launch { screenSampleService.screenFlow.collect { _image.set(SwingFXUtils.toFXImage(it, null)) } }
 
             launch {
-                println("Subscribed")
-                serialService.connectionStateFlow.onEach { println(it) }.onCompletion { println("Complete") }.collect {
+                serialService.connectionStateFlow.collect {
                     when (it) {
                         is ConnectionState.Connected -> _connectionStatus.set("Connected to ${it.portDescriptor}")
                         is ConnectionState.Disconnected -> _connectionStatus.set("Disconnected")

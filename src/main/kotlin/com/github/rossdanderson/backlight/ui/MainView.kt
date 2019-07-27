@@ -1,7 +1,6 @@
 package com.github.rossdanderson.backlight.ui
 
 import com.github.rossdanderson.backlight.ui.base.BaseView
-import javafx.geometry.Orientation
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import tornadofx.*
@@ -14,13 +13,6 @@ class MainView : BaseView() {
     private val mainViewModel by inject<MainViewModel>()
 
     override val root = borderpane {
-        top {
-            button {
-                setOnMouseClicked {
-                    find<PortSelectView>().openModal()
-                }
-            }
-        }
         center {
             vbox {
                 imageview(mainViewModel.image) {
@@ -32,12 +24,7 @@ class MainView : BaseView() {
         }
         bottom {
             hbox(5) {
-
                 text(mainViewModel.connectionStatus)
-
-                separator(Orientation.VERTICAL)
-                label("Port: ")
-                text("-")
             }
         }
     }
