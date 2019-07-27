@@ -2,30 +2,11 @@
 
 package com.github.rossdanderson.backlight
 
-import com.fazecast.jSerialComm.SerialPort
-import com.fazecast.jSerialComm.SerialPortEvent
-import com.fazecast.jSerialComm.SerialPortMessageListener
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.switchMap
 import java.awt.Color
-import java.nio.charset.Charset
-
-fun SerialPort.addDataListener(
-    types: Int,
-    function: (SerialPortEvent) -> Unit
-) {
-    addDataListener(
-        object : SerialPortMessageListener {
-            override fun delimiterIndicatesEndOfMessage(): Boolean = true
-
-            override fun getMessageDelimiter(): ByteArray = "\n".toByteArray(Charset.forName("ASCII"))
-
-            override fun serialEvent(event: SerialPortEvent) {
-                function(event)
-            }
-
-            override fun getListeningEvents(): Int = types
-        }
-    )
-}
 
 private const val alpha = 1.5
 private const val contrast = 7.0
@@ -38,6 +19,10 @@ fun Int.applyContrast(): Int =
     maxOf(0, minOf((contrastFactor * (this - 128) + 128).toInt(), 255))
 
 fun Color.greyscaleLuminosity() = red * 0.299 + green * 0.587 + blue * 0.114
+
+inline fun <reified D : Any> Flow<Any>.ofType(): Flow<D> = filter { it is D }.map { it as D }
+
+fun <U : Any> Flow<Flow<U>>.flattenSwitch(): Flow<U> = switchMap { it }
 
 fun UByteArray.cobsEncode(): UByteArray {
     var readIndex = 0

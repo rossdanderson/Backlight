@@ -2,230 +2,43 @@
 
 package com.github.rossdanderson.backlight
 
-import com.fazecast.jSerialComm.SerialPort
-import com.fazecast.jSerialComm.SerialPort.*
-import com.github.rossdanderson.backlight.messages.Message
-import com.github.rossdanderson.backlight.messages.WriteAllMessage
-import com.github.rossdanderson.backlight.messages.writeAll
-import com.github.rossdanderson.backlight.messages.writeLED
-import javafx.beans.property.SimpleListProperty
-import javafx.scene.Node
-import javafx.scene.Parent
-import javafx.scene.input.MouseEvent
-import javafx.stage.Stage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.channels.actor
+import com.github.rossdanderson.backlight.config.ConfigService
+import com.github.rossdanderson.backlight.screensample.ScreenSampleService
+import com.github.rossdanderson.backlight.serial.SerialService
+import com.github.rossdanderson.backlight.serial.mock.MockSerialService
+import com.github.rossdanderson.backlight.ui.BacklightApp
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import tornadofx.*
-import java.awt.Rectangle
-import java.awt.Robot
-import java.awt.Toolkit
-import java.nio.charset.Charset
-import java.time.Duration
-import java.time.Instant
-import kotlin.Result.Companion.success
-import kotlin.streams.toList
-
-private const val defaultSerialPort = "serial.port.default"
-private const val ledCount = 60
-
-private const val PORT = "PORT"
-
-class MyController : Controller() {
-    val portSelectScreen by inject<PortSelectScreen>()
-    val mainScreen by inject<MainScreen>()
-
-    fun init() {
-        with(config) {
-
-            if (containsKey(PORT)) {
-
-            } else {
-                showPortSelectScreen()
-            }
-        }
-    }
-
-    fun showPortSelectScreen() {
-        mainScreen.replaceWith(portSelectScreen, sizeToScene = true, centerOnScreen = true)
-    }
-}
-
-class MyApp : App(PortSelectScreen::class) {
-    val portSelectController by inject<MyController>()
-
-    override fun start(stage: Stage) {
-        super.start(stage)
-        portSelectController.init()
-    }
-}
-
-class MainScreen : View() {
-    override val root = borderpane {
-        center = vbox {
-            label("Main screen")
-        }
-    }
-}
-
-class PortSelectScreen : View("Please log in") {
-
-    private val listProperty = SimpleListProperty<String>()
-
-    private suspend fun refresh() {
-        withContext(Dispatchers.Default) {
-            
-        }
-    }
-
-    override val root = borderpane {
-        center = vbox {
-            label("Select a port to use:")
-            listview(listProperty) {
-                onUserSelect {
-
-                }
-            }
-            button("Ok")
-            button("Refresh") {
-                onClick {
-                    refresh()
-                }
-            }
-        }
-    }
-}
-
-fun Node.onClick(action: suspend (MouseEvent) -> Unit) {
-    val eventActor = GlobalScope.actor<MouseEvent>(Dispatchers.Main) {
-        for (event in channel) action(event)
-    }
-    setOnMouseClicked {
-        eventActor.offer(it)
-    }
-}
+import org.koin.core.context.startKoin
+import org.koin.dsl.module
+import tornadofx.DIContainer
+import tornadofx.FX
+import tornadofx.launch
+import kotlin.reflect.KClass
 
 fun main() = runBlocking {
-    launch<MyApp>()
+    val scope = this@runBlocking
+    val koinApplication = startKoin {
+        printLogger()
 
-    println("Write LED ($writeLED) messages will be ${3 + 1} bytes")
-    println("Write all ($writeAll) messages will be ${ledCount * 3 + 1} bytes")
+        environmentProperties()
 
-    val serialPort = selectSerialPort()
-
-    serialPort.addDataListener(LISTENING_EVENT_DATA_RECEIVED) {
-        val message = it.receivedData!!.toString(Charset.forName("ASCII")).dropLast(1)
-        if (message.contains("ignoring", ignoreCase = true)) {
-            System.err.println("Response -> $message")
-        }
-    }
-
-    val robot = Robot()
-
-    // TODO Listen for changes to the screen size
-    val screenSize = Toolkit.getDefaultToolkit().screenSize
-    val screenRect = Rectangle(screenSize)
-
-    val width = screenSize.width
-    val height = screenSize.height
-
-    println("Screen dimensions: $width x $height")
-
-    val sampleHeight = 256
-    val sampleWidth = (width.toDouble() / ledCount.toDouble()).toInt()
-
-    val screenSections = (0 until ledCount).map {
-        IntRange2D(
-            xRange = offsetIntRange(it * sampleWidth, sampleWidth),
-            yRange = offsetIntRange(height - sampleHeight, sampleHeight)
+        modules(
+            module {
+                single { EventBus<Any>() }
+                single { ConfigService() }
+                single { ScreenSampleService(get()) }
+                single {
+                    if (getProperty<String>("mock-serial-connection").toBoolean()) MockSerialService()
+                    else SerialService(scope)
+                }
+            }
         )
     }
 
-    while (true) {
-        val start = Instant.now()
-        val screenCapture = captureScreen(robot, screenRect)
-
-        screenSections
-            .stream()
-            .parallel()
-            .map { intRange2d ->
-                var red = 0
-                var green = 0
-                var blue = 0
-                var count = 0
-
-                intRange2d.forEach { x, y ->
-                    val rgb = screenCapture[x, y]
-                    val greyscaleLuminosity = rgb.greyscaleLuminosity()
-                    red += rgb.red.applySaturation(greyscaleLuminosity).applyContrast()
-                    green += rgb.green.applySaturation(greyscaleLuminosity).applyContrast()
-                    blue += rgb.blue.applySaturation(greyscaleLuminosity).applyContrast()
-                    count++
-                }
-
-                val redAvg = (red / count).toUByte()
-                val greenAvg = (green / count).toUByte()
-                val blueAvg = (blue / count).toUByte()
-
-                Color(redAvg, greenAvg, blueAvg)
-            }
-            .sequential()
-            .toList()
-            .let { serialPort.writeMessage(WriteAllMessage.from(ledCount, it)) }
-
-        println("Full update took: ${Duration.between(start, Instant.now()).toMillis()}ms")
-
-        // TODO need to implement ACKs/Semaphores so we don't overload the ESP and drop messages
-    }
-}
-
-private fun captureScreen(robot: Robot, screenRect: Rectangle): FastRGB {
-    val captureStart = Instant.now()
-    val screenCapture = FastRGB(robot.createScreenCapture(screenRect))
-    println("Capture took :${Duration.between(captureStart, Instant.now()).toMillis()}ms")
-
-    return screenCapture
-}
-
-private fun SerialPort.writeMessage(message: Message) {
-    val backingArray = message.backingArray
-    println("Writing bytes ${backingArray.contentToString()}")
-    val encoded = backingArray.cobsEncode().toByteArray()
-    val bytes = encoded + 0u.toUByte().toByte()
-    if (writeBytes(bytes, bytes.size.toLong()) == -1) throw IllegalStateException("Failure to write")
-}
-
-private tailrec fun selectSerialPort(): SerialPort {
-    val commPorts = getCommPorts()
-        .withIndex()
-        .associateBy({ it.index }) { it.value }
-
-    if (commPorts.isEmpty()) {
-        System.err.println("No devices found")
-        throw IllegalStateException("No serial ports found")
+    FX.dicontainer = object : DIContainer {
+        override fun <T : Any> getInstance(type: KClass<T>): T =
+            koinApplication.koin.get(type, null, null)
     }
 
-    val result: Result<SerialPort> = if (commPorts.size == 1) {
-        success(commPorts.values.single())
-    } else runCatching {
-        println("Select a device:")
-        commPorts.forEach { (index, commPort) -> println("  $index. ${commPort.descriptivePortName}") }
-        commPorts.getValue(readLine()!!.toInt())
-    }
-
-    return result
-        .mapCatching {
-            it.apply {
-                baudRate = 115200
-                setComPortTimeouts(TIMEOUT_WRITE_BLOCKING, 1000, 1000)
-                if (!openPort()) throw IllegalStateException("Unable to connect")
-            }
-        }
-        .onSuccess { println("Connected to ${it.descriptivePortName}") }
-        .onFailure(Throwable::printStackTrace)
-        .getOrNull() ?: selectSerialPort()
+    launch<BacklightApp>()
 }
-
-fun offsetIntRange(start: Int, length: Int): IntRange = start until (start + length)

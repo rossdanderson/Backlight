@@ -7,5 +7,8 @@ module backlight.main {
     requires java.desktop;
     requires java.base;
     requires tornadofx;
-    exports com.github.rossdanderson.backlight;
+    requires koin.core;
+    requires kotlin.logging;
+    requires javafx.swing;
+    exports com.github.rossdanderson.backlight.ui;
 }

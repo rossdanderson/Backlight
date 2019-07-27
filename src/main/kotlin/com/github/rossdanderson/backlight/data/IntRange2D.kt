@@ -1,4 +1,4 @@
-package com.github.rossdanderson.backlight
+package com.github.rossdanderson.backlight.data
 
 data class IntRange2D(
     val xRange: IntRange,

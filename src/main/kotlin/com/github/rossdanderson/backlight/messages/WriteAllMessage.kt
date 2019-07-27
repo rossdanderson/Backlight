@@ -2,7 +2,7 @@
 
 package com.github.rossdanderson.backlight.messages
 
-import com.github.rossdanderson.backlight.Color
+import com.github.rossdanderson.backlight.data.UColor
 
 inline class WriteAllMessage(
     override val backingArray: UByteArray
@@ -11,7 +11,7 @@ inline class WriteAllMessage(
     companion object {
         fun from(
             ledCount: Int,
-            colors: Iterable<Color>
+            colors: Iterable<UColor>
         ): WriteAllMessage {
             val uByteArray = UByteArray(ledCount * 3 + 1)
             uByteArray[0] = writeAll
