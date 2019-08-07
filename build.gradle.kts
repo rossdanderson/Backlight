@@ -1,11 +1,13 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
+    val kotlinVersion = "1.3.41"
+
     java
     application
-    kotlin("jvm") version "1.3.41"
-    kotlin("kapt") version "1.3.41"
-//    kotlin("serialization") version "1.3.41"
+    kotlin("jvm") version kotlinVersion
+    kotlin("kapt") version kotlinVersion
+    id("kotlinx-serialization") version "1.3.40"
 //    id("org.javamodularity.moduleplugin") version "1.5.0"
     id("org.openjfx.javafxplugin") version "0.0.7"
 }
@@ -18,6 +20,10 @@ version = "1.0-SNAPSHOT"
 //application {
 //    mainClassName = "$moduleName/com.github.rossdanderson.backlight.BacklightApplicationKt"
 //}
+
+application {
+    mainClassName = "com.github.rossdanderson.backlight.BacklightApplicationKt"
+}
 
 java {
     targetCompatibility = JavaVersion.VERSION_12
@@ -41,6 +47,7 @@ repositories {
     maven("https://oss.sonatype.org/content/repositories/snapshots")
 }
 
+val kotlinSerializationVersion = "0.11.1"
 val kotlinCoroutinesVersion = "1.3.0-M2"
 val javaFXVersion = "12.0.1"
 val koinVersion = "2.0.1"
@@ -50,6 +57,7 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-javafx:$kotlinCoroutinesVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kotlinSerializationVersion")
     implementation("com.fazecast:jSerialComm:2.5.1")
     implementation("no.tornado:tornadofx:2.0.0-SNAPSHOT")
     implementation("org.koin:koin-core:$koinVersion")

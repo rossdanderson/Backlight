@@ -2,9 +2,7 @@ package com.github.rossdanderson.backlight.screensample
 
 import com.github.rossdanderson.backlight.applyContrast
 import com.github.rossdanderson.backlight.applySaturation
-import com.github.rossdanderson.backlight.config.Config
 import com.github.rossdanderson.backlight.config.ConfigService
-import com.github.rossdanderson.backlight.config.ledCount
 import com.github.rossdanderson.backlight.data.Image
 import com.github.rossdanderson.backlight.data.IntRange2D
 import com.github.rossdanderson.backlight.data.UColor
@@ -58,8 +56,6 @@ class ScreenSampleService(
             var prevImageWidth: Int? = null
             var prevImageHeight: Int? = null
             var screenSections: List<IntRange2D>? = null
-
-            Config.ledCount.asGetter()
 
             screenFlow
                 .map { Image(it) }

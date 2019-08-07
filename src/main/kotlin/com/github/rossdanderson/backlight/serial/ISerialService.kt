@@ -1,12 +1,12 @@
+@file:Suppress("EXPERIMENTAL_API_USAGE")
+
 package com.github.rossdanderson.backlight.serial
 
 import com.github.rossdanderson.backlight.messages.Message
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 
 typealias ReceiveMessage = String
 
-@ExperimentalCoroutinesApi
 interface ISerialService {
 
     val connectionStateFlow: Flow<ConnectionState>
@@ -19,5 +19,5 @@ interface ISerialService {
 
     suspend fun disconnect()
 
-    suspend fun send(message: Message): SendMessageResult
+    suspend fun send(message: Message)
 }

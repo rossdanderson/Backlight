@@ -1,3 +1,5 @@
+@file:Suppress("EXPERIMENTAL_API_USAGE", "EXPERIMENTAL_OVERRIDE", "EXPERIMENTAL_UNSIGNED_LITERALS")
+
 package com.github.rossdanderson.backlight.serial
 
 import com.fazecast.jSerialComm.SerialPort
@@ -18,10 +20,6 @@ import kotlinx.coroutines.flow.*
 import mu.KotlinLogging
 import java.nio.charset.Charset
 
-@ExperimentalUnsignedTypes
-@FlowPreview
-@ObsoleteCoroutinesApi
-@ExperimentalCoroutinesApi
 class SerialService(scope: CoroutineScope) : ISerialService {
 
     private val logger = KotlinLogging.logger {}
@@ -39,8 +37,7 @@ class SerialService(scope: CoroutineScope) : ISerialService {
         object SendHeartbeat : ConnectionActorMessage()
 
         data class SendMessage(
-            val message: Message,
-            val response: CompletableDeferred<SendMessageResult>
+            val message: Message
         ) : ConnectionActorMessage()
     }
 
@@ -137,8 +134,9 @@ class SerialService(scope: CoroutineScope) : ISerialService {
     private val receiveFlowChannel = BroadcastChannel<ReceiveMessage>(BUFFERED)
     override val receiveFlow: Flow<ReceiveMessage> = receiveFlowChannel.asFlow()
 
-    override suspend fun send(message: Message): SendMessageResult =
-        CompletableDeferred<SendMessageResult>().also { connectionActor.send(SendMessage(message, it)) }.await()
+    override suspend fun send(message: Message) {
+        connectionActor.send(SendMessage(message))
+    }
 
     private fun SerialPort.writeMessage(message: Message) {
         val backingArray = message.backingArray

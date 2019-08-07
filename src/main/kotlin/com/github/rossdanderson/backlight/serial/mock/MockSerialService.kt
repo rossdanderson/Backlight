@@ -1,10 +1,13 @@
 package com.github.rossdanderson.backlight.serial.mock
 
 import com.github.rossdanderson.backlight.messages.Message
-import com.github.rossdanderson.backlight.serial.*
+import com.github.rossdanderson.backlight.serial.ConnectResult
 import com.github.rossdanderson.backlight.serial.ConnectResult.Failure
 import com.github.rossdanderson.backlight.serial.ConnectResult.Success
+import com.github.rossdanderson.backlight.serial.ConnectionState
 import com.github.rossdanderson.backlight.serial.ConnectionState.Disconnected
+import com.github.rossdanderson.backlight.serial.ISerialService
+import com.github.rossdanderson.backlight.serial.ReceiveMessage
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.flow.*
@@ -69,13 +72,11 @@ class MockSerialService : ISerialService {
         delay(100)
     }
 
-    override suspend fun send(message: Message): SendMessageResult = withContext(Dispatchers.IO) {
+    override suspend fun send(message: Message) = withContext(Dispatchers.IO) {
         if (connectedPort.get() != null) {
             logger.warn { "Message sent - $message" }
-            SendMessageResult.Success
         } else {
             logger.warn { "Message dropped - $message - not currently connected" }
-            SendMessageResult.Failure("Not currently connected")
         }
     }
 }
