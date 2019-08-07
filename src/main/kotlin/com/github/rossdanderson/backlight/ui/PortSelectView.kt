@@ -1,13 +1,14 @@
 package com.github.rossdanderson.backlight.ui
 
-import com.github.rossdanderson.backlight.ofType
 import com.github.rossdanderson.backlight.ui.PortSelectViewModel.PortSelectEvent.CloseEvent
 import com.github.rossdanderson.backlight.ui.PortSelectViewModel.PortSelectEvent.ConnectionFailedAlertEvent
 import com.github.rossdanderson.backlight.ui.base.BaseView
 import javafx.geometry.Pos.CENTER
+import javafx.scene.control.Alert
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
 import tornadofx.*
 
@@ -19,11 +20,11 @@ class PortSelectView : BaseView("Port Select") {
 
     init {
         launch {
-            portDetailsViewModel.receive.ofType<ConnectionFailedAlertEvent>()
-                .collect { close() }
+            portDetailsViewModel.eventBus.receive.filterIsInstance<ConnectionFailedAlertEvent>()
+                .collect { alert(Alert.AlertType.WARNING, "Unable to connect to ${it.portDescriptor}") }
         }
         launch {
-            portDetailsViewModel.receive.ofType<CloseEvent>().collect { close() }
+            portDetailsViewModel.eventBus.receive.filterIsInstance<CloseEvent>().collect { close() }
         }
     }
 
@@ -34,7 +35,7 @@ class PortSelectView : BaseView("Port Select") {
 
                 label("Select a port to use:")
                 listview(portDetailsViewModel.ports) {
-                    onUserSelect { launch { portDetailsViewModel.connectCommand.execute(it) } }
+                    onUserSelect { portDetailsViewModel.connectCommand.execute(it) }
                 }
             }
 
@@ -46,11 +47,11 @@ class PortSelectView : BaseView("Port Select") {
             }
         }
 
-    override suspend fun onAttach() {
+    override fun onDock() {
         portDetailsViewModel.startSubscriptions.execute()
     }
 
-    override suspend fun onDetach() {
+    override fun onUndock() {
         portDetailsViewModel.stopSubscriptions.execute()
     }
 }

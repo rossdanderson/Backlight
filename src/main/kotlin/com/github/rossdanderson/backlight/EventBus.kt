@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asFlow
 @FlowPreview
 @ExperimentalCoroutinesApi
 class EventBus<T : Any> {
+
     private val broadcastChannel = BroadcastChannel<T>(BUFFERED)
 
     val receive = broadcastChannel.asFlow()

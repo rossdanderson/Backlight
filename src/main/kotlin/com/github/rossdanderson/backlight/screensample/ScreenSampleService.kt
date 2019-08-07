@@ -2,7 +2,9 @@ package com.github.rossdanderson.backlight.screensample
 
 import com.github.rossdanderson.backlight.applyContrast
 import com.github.rossdanderson.backlight.applySaturation
+import com.github.rossdanderson.backlight.config.Config
 import com.github.rossdanderson.backlight.config.ConfigService
+import com.github.rossdanderson.backlight.config.ledCount
 import com.github.rossdanderson.backlight.data.Image
 import com.github.rossdanderson.backlight.data.IntRange2D
 import com.github.rossdanderson.backlight.data.UColor
@@ -33,8 +35,11 @@ class ScreenSampleService(
     // TODO Should listen for changes
     private val screenDimensionsFlow: Flow<Dimension> = flowOf(Toolkit.getDefaultToolkit().screenSize)
 
+    // TODO replace with Focused flow
     private val minDelayMillisFlow = configService.configFlow.map { it.minDelayMillis }.distinctUntilChanged()
     private val ledCountFlow = configService.configFlow.map { it.ledCount }.distinctUntilChanged()
+    private val contrastFactorFlow = configService.configFlow.map { it.contrastFactor }.distinctUntilChanged()
+    private val saturationAlphaFlow = configService.configFlow.map { it.saturationAlpha }.distinctUntilChanged()
 
     val screenFlow: Flow<BufferedImage> = minDelayMillisFlow
         .combineLatest(screenDimensionsFlow) { minDelayMillis, dimensions ->
@@ -54,9 +59,11 @@ class ScreenSampleService(
             var prevImageHeight: Int? = null
             var screenSections: List<IntRange2D>? = null
 
+            Config.ledCount.asGetter()
+
             screenFlow
                 .map { Image(it) }
-                .map { image ->
+                .combineLatest(contrastFactorFlow, saturationAlphaFlow) { image, contrastFactor, saturationAlpha ->
                     // If the image dimensions or the number of LEDs changes, remap the screen sections to sample from
                     if (screenSections == null || prevImageHeight != image.height || prevImageWidth != image.width) {
                         prevImageWidth = image.width
@@ -74,18 +81,24 @@ class ScreenSampleService(
                     }
 
                     screenSections!!
-                        .map { intRange2d ->
+                        .map { intRange2D ->
                             var red = 0
                             var green = 0
                             var blue = 0
                             var count = 0
 
-                            intRange2d.forEach { x, y ->
+                            intRange2D.forEach { x, y ->
                                 val rgb = image[x, y]
                                 val greyscaleLuminosity = rgb.greyscaleLuminosity()
-                                red += rgb.red.applySaturation(greyscaleLuminosity).applyContrast()
-                                green += rgb.green.applySaturation(greyscaleLuminosity).applyContrast()
-                                blue += rgb.blue.applySaturation(greyscaleLuminosity).applyContrast()
+                                red += rgb.red
+                                    .applySaturation(saturationAlpha, greyscaleLuminosity)
+                                    .applyContrast(contrastFactor)
+                                green += rgb.green
+                                    .applySaturation(saturationAlpha, greyscaleLuminosity)
+                                    .applyContrast(contrastFactor)
+                                blue += rgb.blue
+                                    .applySaturation(saturationAlpha, greyscaleLuminosity)
+                                    .applyContrast(contrastFactor)
                                 count++
                             }
 

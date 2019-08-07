@@ -3,14 +3,12 @@ package com.github.rossdanderson.backlight.ui.command
 import javafx.beans.binding.BooleanExpression
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.SimpleBooleanProperty
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.*
 
 class Command internal constructor(
     val enabled: BooleanExpression = SimpleBooleanProperty(true),
     private val scope: CoroutineScope,
-    private val action: suspend CoroutineScope.() -> Unit
+    private val action: suspend () -> Unit
 ) {
     private val _running = SimpleBooleanProperty(false)
     val running: ReadOnlyBooleanProperty = _running
@@ -19,13 +17,15 @@ class Command internal constructor(
 
     private val disabledProperty = enabled.not().or(running)
 
-    suspend fun execute() {
+    fun execute() {
         if (!isRunning && !disabledProperty.value) {
-            _running.value = true
-            try {
-                scope.action()
-            } finally {
-                _running.value = false
+            scope.launch(Dispatchers.Unconfined) {
+                try {
+                    _running.value = true
+                    action()
+                } finally {
+                    _running.value = false
+                }
             }
         }
     }
@@ -35,5 +35,5 @@ class Command internal constructor(
 @FlowPreview
 fun CoroutineScope.command(
     enabled: BooleanExpression = SimpleBooleanProperty(true),
-    action: suspend CoroutineScope.() -> Unit
+    action: suspend () -> Unit
 ): Command = Command(enabled, this, action)

@@ -3,24 +3,17 @@
 package com.github.rossdanderson.backlight
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.switchMap
 import java.awt.Color
 
-private const val alpha = 1.5
-private const val contrast = 7.0
-private const val contrastFactor: Double = (259.0 * (contrast + 255.0)) / (255.0 * (259.0 - contrast))
 
-fun Int.applySaturation(greyscaleLuminosity: Double): Int =
+fun Int.applySaturation(alpha: Double, greyscaleLuminosity: Double): Int =
     maxOf(0, minOf(255, (alpha * this + (1.0 - alpha) * greyscaleLuminosity).toInt()))
 
-fun Int.applyContrast(): Int =
+fun Int.applyContrast(contrastFactor: Double): Int =
     maxOf(0, minOf((contrastFactor * (this - 128) + 128).toInt(), 255))
 
 fun Color.greyscaleLuminosity() = red * 0.299 + green * 0.587 + blue * 0.114
-
-inline fun <reified D : Any> Flow<Any>.ofType(): Flow<D> = filter { it is D }.map { it as D }
 
 fun <U : Any> Flow<Flow<U>>.flattenSwitch(): Flow<U> = switchMap { it }
 

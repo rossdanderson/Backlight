@@ -2,6 +2,8 @@ package com.github.rossdanderson.backlight.ui
 
 import com.github.rossdanderson.backlight.serial.ConnectResult
 import com.github.rossdanderson.backlight.serial.ISerialService
+import com.github.rossdanderson.backlight.ui.PortSelectViewModel.PortSelectEvent.CloseEvent
+import com.github.rossdanderson.backlight.ui.PortSelectViewModel.PortSelectEvent.ConnectionFailedAlertEvent
 import com.github.rossdanderson.backlight.ui.base.BaseViewModel
 import com.github.rossdanderson.backlight.ui.command.command
 import javafx.beans.property.ReadOnlyListProperty
@@ -18,7 +20,7 @@ import tornadofx.observable
 class PortSelectViewModel : BaseViewModel() {
 
     sealed class PortSelectEvent {
-        object ConnectionFailedAlertEvent : PortSelectEvent()
+        data class ConnectionFailedAlertEvent(val portDescriptor: String) : PortSelectEvent()
         object CloseEvent : PortSelectEvent()
     }
 
@@ -39,8 +41,8 @@ class PortSelectViewModel : BaseViewModel() {
 
     val connectCommand = command<String> {
         when (serialService.connect(it)) {
-            ConnectResult.Success -> fire(PortSelectEvent.CloseEvent)
-            ConnectResult.Failure -> fire(PortSelectEvent.ConnectionFailedAlertEvent)
+            ConnectResult.Success -> eventBus.fire(CloseEvent)
+            ConnectResult.Failure -> eventBus.fire(ConnectionFailedAlertEvent(it))
         }
     }
 }

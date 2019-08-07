@@ -13,11 +13,5 @@ abstract class BaseViewModel(
     coroutineScope: CoroutineScope = MainScope()
 ) : ViewModel(), CoroutineScope by coroutineScope {
 
-    private val eventBus = EventBus<Any>()
-
-    protected fun fire(event: Any) {
-        eventBus.fire(event)
-    }
-
-    val receive = eventBus.receive
+    val eventBus = EventBus<Any>()
 }

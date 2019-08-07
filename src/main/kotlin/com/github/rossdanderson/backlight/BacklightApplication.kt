@@ -2,6 +2,7 @@
 
 package com.github.rossdanderson.backlight
 
+import com.github.rossdanderson.backlight.config.Config
 import com.github.rossdanderson.backlight.config.ConfigService
 import com.github.rossdanderson.backlight.screensample.ScreenSampleService
 import com.github.rossdanderson.backlight.serial.SerialService
@@ -25,7 +26,7 @@ fun main() = runBlocking {
         modules(
             module {
                 single { EventBus<Any>() }
-                single { ConfigService() }
+                single { ConfigService(Config()) }
                 single { ScreenSampleService(get()) }
                 single {
                     if (getProperty<String>("mock-serial-connection").toBoolean()) MockSerialService()
