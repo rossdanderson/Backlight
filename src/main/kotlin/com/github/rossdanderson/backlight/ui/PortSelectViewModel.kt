@@ -1,5 +1,8 @@
 package com.github.rossdanderson.backlight.ui
 
+import com.github.rossdanderson.backlight.config.Config
+import com.github.rossdanderson.backlight.config.ConfigService
+import com.github.rossdanderson.backlight.config.defaultPort
 import com.github.rossdanderson.backlight.serial.ConnectResult
 import com.github.rossdanderson.backlight.serial.ISerialService
 import com.github.rossdanderson.backlight.ui.PortSelectViewModel.PortSelectEvent.CloseEvent
@@ -25,11 +28,12 @@ class PortSelectViewModel : BaseViewModel() {
     }
 
     private val serialService by di<ISerialService>()
+    private val configService by di<ConfigService>()
 
     private val _ports: SimpleListProperty<String> = SimpleListProperty()
     val ports: ReadOnlyListProperty<String> = _ports
 
-    lateinit var subscriptionsJob: Job
+    private lateinit var subscriptionsJob: Job
 
     val startSubscriptions = command {
         subscriptionsJob = launch { serialService.availablePortDescriptorsFlow.collect { _ports.set(it.observable()) } }
@@ -41,7 +45,10 @@ class PortSelectViewModel : BaseViewModel() {
 
     val connectCommand = command<String> {
         when (serialService.connect(it)) {
-            ConnectResult.Success -> eventBus.fire(CloseEvent)
+            ConnectResult.Success -> {
+                eventBus.fire(CloseEvent)
+                configService.set(Config.defaultPort, it)
+            }
             ConnectResult.Failure -> eventBus.fire(ConnectionFailedAlertEvent(it))
         }
     }

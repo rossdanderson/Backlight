@@ -86,6 +86,6 @@ class MainViewModel : BaseViewModel() {
     }
 
     val updateSaturation = command<Double> { saturationAlpha ->
-        configService.set(Config.saturationAlpha, saturationAlpha)
+        configService.set(Config.saturationAlpha.asSetter(), saturationAlpha)
     }
 }
