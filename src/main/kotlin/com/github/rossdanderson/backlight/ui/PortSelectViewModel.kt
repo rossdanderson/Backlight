@@ -1,55 +1,41 @@
 package com.github.rossdanderson.backlight.ui
 
-import com.github.rossdanderson.backlight.config.Config
+import com.github.rossdanderson.backlight.config.Config.Companion.defaultPortLens
 import com.github.rossdanderson.backlight.config.ConfigService
-import com.github.rossdanderson.backlight.config.defaultPort
 import com.github.rossdanderson.backlight.serial.ConnectResult
 import com.github.rossdanderson.backlight.serial.ISerialService
-import com.github.rossdanderson.backlight.ui.PortSelectViewModel.PortSelectEvent.CloseEvent
-import com.github.rossdanderson.backlight.ui.PortSelectViewModel.PortSelectEvent.ConnectionFailedAlertEvent
 import com.github.rossdanderson.backlight.ui.base.BaseViewModel
 import com.github.rossdanderson.backlight.ui.command.command
-import javafx.beans.property.ReadOnlyListProperty
-import javafx.beans.property.SimpleListProperty
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
-import tornadofx.observable
+import kotlinx.coroutines.channels.BroadcastChannel
+import kotlinx.coroutines.flow.asFlow
 
 @FlowPreview
 @ExperimentalCoroutinesApi
 class PortSelectViewModel : BaseViewModel() {
 
-    sealed class PortSelectEvent {
-        data class ConnectionFailedAlertEvent(val portDescriptor: String) : PortSelectEvent()
-        object CloseEvent : PortSelectEvent()
-    }
+    data class ConnectionFailedAlertEvent(val portDescriptor: String)
 
     private val serialService by di<ISerialService>()
     private val configService by di<ConfigService>()
 
-    private val _ports: SimpleListProperty<String> = SimpleListProperty()
-    val ports: ReadOnlyListProperty<String> = _ports
+    val ports = serialService.availablePortDescriptorsFlow
 
-    private lateinit var subscriptionsJob: Job
+    private val connectionFailedAlertEventBroadcastChannel = BroadcastChannel<ConnectionFailedAlertEvent>(1)
+    val connectionFailedAlertEventFlow = connectionFailedAlertEventBroadcastChannel.asFlow()
 
-    val startSubscriptions = command {
-        subscriptionsJob = launch { serialService.availablePortDescriptorsFlow.collect { _ports.set(it.observable()) } }
-    }
+    private val closeEventBroadcastChannel = BroadcastChannel<Unit>(1)
+    val closeEventFlow = closeEventBroadcastChannel.asFlow()
 
-    val stopSubscriptions = command {
-        subscriptionsJob.cancel()
-    }
-
-    val connectCommand = command<String> {
-        when (serialService.connect(it)) {
+    val connectCommand = command<String> { portDescriptor ->
+        when (serialService.connect(portDescriptor)) {
             ConnectResult.Success -> {
-                eventBus.fire(CloseEvent)
-                configService.set(Config.defaultPort, it)
+                closeEventBroadcastChannel.offer(Unit)
+                configService.set(defaultPortLens, portDescriptor)
             }
-            ConnectResult.Failure -> eventBus.fire(ConnectionFailedAlertEvent(it))
+            ConnectResult.Failure -> connectionFailedAlertEventBroadcastChannel
+                .offer(ConnectionFailedAlertEvent(portDescriptor))
         }
     }
 }

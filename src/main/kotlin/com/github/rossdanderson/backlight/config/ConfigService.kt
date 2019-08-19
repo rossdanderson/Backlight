@@ -2,12 +2,13 @@
 
 package com.github.rossdanderson.backlight.config
 
-import arrow.optics.Optional
-import arrow.optics.Setter
+import com.github.rossdanderson.backlight.data.Lens
+import com.github.rossdanderson.backlight.data.Setter
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -19,14 +20,13 @@ import java.nio.file.Paths
 class ConfigService(
     private val json: Json
 ) {
-    private lateinit var config: Config
     private val modifyMutex = Mutex()
 
     private val configBroadcastChannel = ConflatedBroadcastChannel<Config>()
     val configFlow: Flow<Config> = configBroadcastChannel.asFlow()
 
     companion object {
-        private val logger = KotlinLogging.logger {  }
+        private val logger = KotlinLogging.logger { }
         private val path = Paths.get("${System.getProperty("user.home")}/.backlight.json").toAbsolutePath()
     }
 
@@ -42,7 +42,7 @@ class ConfigService(
                         publish(config)
                     }
                 }.recover {
-                    logger.warn { "Unable to load config from $path - using defaults" }
+                    logger.warn(it) { "Unable to load config from $path - using defaults" }
                     persistAndPublish(Config())
                 }
             } else {
@@ -52,44 +52,46 @@ class ConfigService(
         }
     }
 
-    suspend fun <T> set(setter: Setter<Config, T>, mutator: (T) -> T) {
+
+    suspend fun <T> modify(lens: Lens<Config, T>, mutator: (T) -> T) {
+        modify(lens.asSetter(), mutator)
+    }
+
+    suspend fun <T> modify(setter: Setter<Config, T>, mutator: (T) -> T) {
         modifyMutex.withLock {
-            persistAndPublish(setter.modify(config, mutator))
+            val oldConfig = configFlow.first()
+            val newConfig = setter.modify(oldConfig, mutator)
+            if (oldConfig != newConfig) persistAndPublish(newConfig)
         }
+    }
+
+    suspend fun <T> set(lens: Lens<Config, T>, value: T) {
+        set(lens.asSetter(), value)
     }
 
     suspend fun <T> set(setter: Setter<Config, T>, value: T) {
         modifyMutex.withLock {
-            persistAndPublish(setter.set(config, value))
-        }
-    }
-
-    suspend fun <T> set(setter: Optional<Config, T>, value: T) {
-        modifyMutex.withLock {
-            persistAndPublish(setter.set(config, value))
-        }
-    }
-
-    suspend fun <T> set(setter: Optional<Config, T>, mutator: (T) -> T) {
-        modifyMutex.withLock {
-            persistAndPublish(setter.modify(config, mutator))
+            val oldConfig = configFlow.first()
+            val newConfig = setter.set(oldConfig, value)
+            if (oldConfig != newConfig) persistAndPublish(newConfig)
         }
     }
 
     private suspend fun persistAndPublish(config: Config) {
-        logger.info { "Persisting $config" }
-        withContext(Dispatchers.IO) {
-            val stringify = json.stringify(Config.serializer(), config)
-            path.toFile().bufferedWriter().use {
-                it.write(stringify)
+        withContext(NonCancellable) {
+            logger.info { "Persisting $config" }
+            val serializedConfig = json.stringify(Config.serializer(), config)
+            withContext(Dispatchers.IO) {
+                path.toFile().bufferedWriter().use { it.write(serializedConfig) }
             }
+            publish(config)
         }
-        publish(config)
     }
 
     private suspend fun publish(config: Config) {
-        logger.info { "Publishing $config" }
-        this.config = config
-        configBroadcastChannel.send(config)
+        withContext(NonCancellable) {
+            logger.info { "Publishing $config" }
+            configBroadcastChannel.send(config)
+        }
     }
 }

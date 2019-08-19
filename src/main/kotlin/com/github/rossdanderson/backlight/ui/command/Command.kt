@@ -1,28 +1,41 @@
 package com.github.rossdanderson.backlight.ui.command
 
 import javafx.beans.binding.BooleanExpression
-import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.SimpleBooleanProperty
 import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers.Default
+import java.time.Duration
 
-class Command internal constructor(
-    val enabled: BooleanExpression = SimpleBooleanProperty(true),
-    private val scope: CoroutineScope,
-    private val action: suspend () -> Unit
-) {
+interface ICommand {
+    val enabled: BooleanExpression
+    val running: BooleanExpression
+}
+
+class Command(
+    private val parameterisedCommand: ParameterisedCommand<Unit>
+) : ICommand by parameterisedCommand {
+    suspend operator fun invoke() = parameterisedCommand.invoke(Unit)
+}
+
+class ParameterisedCommand<in T> internal constructor(
+    override val enabled: BooleanExpression,
+    private val debounce: Duration?,
+    private val disableWhileRunning: Boolean,
+    private val action: suspend CoroutineScope.(T) -> Unit
+) : ICommand {
+    private var debounceJob: Job? = null
     private val _running = SimpleBooleanProperty(false)
-    val running: ReadOnlyBooleanProperty = _running
-    val isRunning: Boolean get() = running.value
-    val isEnabled: Boolean get() = enabled.value
+    override val running: BooleanExpression = _running
 
-    private val disabledProperty = enabled.not().or(running)
+    suspend operator fun invoke(param: T): Unit = coroutineScope {
+        if (enabled.value && !(running.value && disableWhileRunning)) {
+            debounceJob?.cancel()
 
-    fun execute() {
-        if (!isRunning && !disabledProperty.value) {
-            scope.launch(Dispatchers.Unconfined) {
+            debounceJob = launch(Default) {
+                _running.value = true
+                if (debounce != null) delay(debounce.toMillis())
                 try {
-                    _running.value = true
-                    action()
+                    action(param)
                 } finally {
                     _running.value = false
                 }
@@ -33,7 +46,18 @@ class Command internal constructor(
 
 @ExperimentalCoroutinesApi
 @FlowPreview
-fun CoroutineScope.command(
+fun <T> command(
     enabled: BooleanExpression = SimpleBooleanProperty(true),
-    action: suspend () -> Unit
-): Command = Command(enabled, this, action)
+    debounce: Duration? = null,
+    disableWhileRunning: Boolean = false,
+    action: suspend CoroutineScope.(T) -> Unit
+): ParameterisedCommand<T> = ParameterisedCommand(enabled, debounce, disableWhileRunning, action)
+
+@ExperimentalCoroutinesApi
+@FlowPreview
+fun command(
+    enabled: BooleanExpression = SimpleBooleanProperty(true),
+    debounce: Duration? = null,
+    disableWhileRunning: Boolean = false,
+    action: suspend CoroutineScope.() -> Unit
+): Command = Command(command<Unit>(enabled, debounce, disableWhileRunning) { action() })

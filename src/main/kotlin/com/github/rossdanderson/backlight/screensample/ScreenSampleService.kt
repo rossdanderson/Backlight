@@ -51,7 +51,7 @@ class ScreenSampleService(
         }
         .flattenSwitch()
 
-    val ledColorFlow: Flow<List<UColor>> = ledCountFlow
+    val ledColorsFlow: Flow<List<UColor>> = ledCountFlow
         .switchMap { ledCount ->
             var prevImageWidth: Int? = null
             var prevImageHeight: Int? = null
