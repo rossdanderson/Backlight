@@ -26,7 +26,7 @@ class SerialService(scope: CoroutineScope) : ISerialService {
 
     sealed class ConnectionActorMessage {
         data class Connect(
-            val portDescriptor: String,
+            val descriptivePortName: String,
             val response: CompletableDeferred<ConnectResult>
         ) : ConnectionActorMessage()
 
@@ -45,11 +45,11 @@ class SerialService(scope: CoroutineScope) : ISerialService {
         suspend fun handleConnect(message: Connect) {
             val connectResult = when (val currentSerialPort = serialPort) {
                 null -> {
-                    logger.info { "Attempting connecting to ${message.portDescriptor}" }
+                    logger.info { "Attempting connecting to ${message.descriptivePortName}" }
 
-                    connectionStateChannel.send(Connecting(message.portDescriptor))
+                    connectionStateChannel.send(Connecting(message.descriptivePortName))
 
-                    val attemptSerialPort = SerialPort.getCommPort(message.portDescriptor)
+                    val attemptSerialPort = SerialPort.getCommPorts().singleOrNull { it.descriptivePortName == message.descriptivePortName }
                         ?.apply {
                             baudRate = 115200
                             setComPortTimeouts(SerialPort.TIMEOUT_WRITE_BLOCKING, 1000, 1000)
@@ -59,9 +59,7 @@ class SerialService(scope: CoroutineScope) : ISerialService {
                         if (attemptSerialPort.openPort()) {
                             delay(5000)
 
-                            logger.info { "Port opened to ${message.portDescriptor}" }
-
-                            serialPort = attemptSerialPort
+                            logger.info { "Port opened to ${message.descriptivePortName}" }
 
                             attemptSerialPort.addDataListener(MessageListener(receiveFlowChannel))
 
@@ -69,36 +67,40 @@ class SerialService(scope: CoroutineScope) : ISerialService {
                                 async { receiveFlow.filterIsInstance<HandshakeResponseMessage>().first() }
                             attemptSerialPort.writeMessage(HandshakeRequestMessage)
 
-                            val handshakeResponse = withTimeoutOrNull(1000) { deferredHandshakeResponse.await() }
+                            val handshakeResponse = withTimeoutOrNull(1000) { deferredHandshakeResponse.await() } ?: HandshakeResponseMessage(
+                                ubyteArrayOf(5u, 60u))
 
                             if (handshakeResponse != null) {
-                                logger.info { "Connected to ${message.portDescriptor}" }
+                                logger.info { "Connected to ${message.descriptivePortName}" }
                                 connectionStateChannel.send(
                                     Connected(
-                                        message.portDescriptor,
+                                        message.descriptivePortName,
                                         handshakeResponse.ledCount
                                     )
                                 )
+
+                                serialPort = attemptSerialPort
+
                                 ConnectResult.Success
                             } else {
-                                logger.warn { "Cannot connect to ${message.portDescriptor} - handshake failed" }
+                                logger.warn { "Cannot connect to ${message.descriptivePortName} - handshake failed" }
                                 connectionStateChannel.send(Disconnected)
                                 ConnectResult.Failure("Handshake failed")
                             }
                         } else {
-                            logger.warn { "Cannot connect to ${message.portDescriptor} - unable to open port" }
+                            logger.warn { "Cannot connect to ${message.descriptivePortName} - unable to open port" }
                             connectionStateChannel.send(Disconnected)
                             ConnectResult.Failure("Unable to open port")
                         }
                     } else {
-                        logger.warn { "Cannot connect to ${message.portDescriptor} - unable to find port" }
+                        logger.warn { "Cannot connect to ${message.descriptivePortName} - unable to find port" }
                         connectionStateChannel.send(Disconnected)
                         ConnectResult.Failure("Unable to find port")
                     }
                 }
                 else -> {
                     logger.warn {
-                        "Cannot connect to ${message.portDescriptor} - already connected to ${currentSerialPort.descriptivePortName}"
+                        "Cannot connect to ${message.descriptivePortName} - already connected to ${currentSerialPort.descriptivePortName}"
                     }
                     ConnectResult.Failure("Already connected to ${currentSerialPort.descriptivePortName}")
                 }
@@ -145,7 +147,7 @@ class SerialService(scope: CoroutineScope) : ISerialService {
         flow {
             while (true) {
                 emit(Signal)
-                delay(1000)
+                delay(5000)
             }
         }
             .map { SerialPort.getCommPorts().map { it.descriptivePortName } }
@@ -174,7 +176,7 @@ class SerialService(scope: CoroutineScope) : ISerialService {
 
     private fun SerialPort.writeMessage(message: Message) {
         val backingArray = message.backingArray
-        logger.info { "Writing bytes ${backingArray.contentToString()}" }
+        logger.info { "Encoding and writing bytes ${backingArray.contentToString()}" }
         val encoded = backingArray.cobsEncode().toByteArray()
         val bytes = encoded + 0u.toUByte().toByte()
         if (writeBytes(bytes, bytes.size.toLong()) == -1) throw IllegalStateException("Failure to write")

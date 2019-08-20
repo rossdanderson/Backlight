@@ -83,8 +83,7 @@ class MainView : BaseView() {
 
     override fun onDock() {
         launch {
-            vm.showPortSelectEventFlow
-                .collect { find<PortSelectFragment>().openModal() }
+            vm.showPortSelectEventFlow.collect { find<PortSelectFragment>().openModal() }
         }
     }
 }
