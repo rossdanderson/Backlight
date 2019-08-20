@@ -10,10 +10,9 @@ inline class WriteAllMessage(
 
     companion object {
         operator fun invoke(
-            ledCount: Int,
             colors: Iterable<UColor>
         ): WriteAllMessage {
-            val uByteArray = UByteArray(ledCount * 3 + 1)
+            val uByteArray = UByteArray(colors.count() * 3 + 1)
             uByteArray[0] = writeAll
             colors.forEachIndexed { ledIndex, color ->
                 color.rgb.forEachIndexed { colorIndex, j ->

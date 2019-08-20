@@ -7,7 +7,6 @@ import com.github.rossdanderson.backlight.serial.ConnectResult.Success
 import com.github.rossdanderson.backlight.serial.ConnectionState
 import com.github.rossdanderson.backlight.serial.ConnectionState.Disconnected
 import com.github.rossdanderson.backlight.serial.ISerialService
-import com.github.rossdanderson.backlight.serial.ReceiveMessage
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.flow.*
@@ -28,7 +27,7 @@ class MockSerialService : ISerialService {
 
     override val connectionStateFlow: Flow<ConnectionState> = connectionStateChannel.asFlow()
 
-    override val receiveFlow: Flow<ReceiveMessage> = flowOf()
+    override val receiveFlow: Flow<Message> = flowOf()
 
     override val availablePortDescriptorsFlow: Flow<List<String>> =
         flow {
@@ -44,17 +43,17 @@ class MockSerialService : ISerialService {
         val result = when (portDescriptor) {
             "Port - 1" -> {
                 logger.warn { "Cannot connect to $portDescriptor - magic port" }
-                Failure
+                Failure("Magic port")
             }
             else -> when (val previousConnection = connectedPort.compareAndExchange(null, portDescriptor)) {
                 null -> {
-                    connectionStateChannel.send(ConnectionState.Connected(portDescriptor))
+                    connectionStateChannel.send(ConnectionState.Connected(portDescriptor, 60))
                     logger.info { "Connected to $portDescriptor" }
                     Success
                 }
                 else -> {
                     logger.warn { "Cannot connect to $portDescriptor - already connected to $previousConnection" }
-                    Failure
+                    Failure("Already connected to $previousConnection")
                 }
             }
         }

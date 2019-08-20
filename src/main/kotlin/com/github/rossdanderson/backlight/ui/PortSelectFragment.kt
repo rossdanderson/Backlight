@@ -41,7 +41,7 @@ class PortSelectFragment : BaseFragment("Port Select") {
     override fun onDock() {
         launch {
             vm.connectionFailedAlertEventFlow
-                .collect { alert(Alert.AlertType.WARNING, "Unable to connect to ${it.portDescriptor}") }
+                .collect { alert(Alert.AlertType.WARNING, "Unable to connect to ${it.portDescriptor}", it.reason) }
         }
         launch { vm.closeEventFlow.collect { close() } }
     }

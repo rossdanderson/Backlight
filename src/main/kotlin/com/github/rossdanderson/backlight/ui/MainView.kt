@@ -1,3 +1,5 @@
+@file:Suppress("EXPERIMENTAL_API_USAGE")
+
 package com.github.rossdanderson.backlight.ui
 
 import com.github.rossdanderson.backlight.ui.base.BaseView
@@ -10,17 +12,12 @@ import javafx.scene.paint.Color
 import javafx.scene.paint.CycleMethod
 import javafx.scene.paint.LinearGradient
 import javafx.scene.paint.Stop
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import tornadofx.*
 
 const val colorFormatMultiplier = 1.0 / 255.0
 
-@FlowPreview
-@ExperimentalUnsignedTypes
-@ExperimentalCoroutinesApi
 class MainView : BaseView() {
 
     private val vm by inject<MainViewModel>()

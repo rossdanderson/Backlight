@@ -15,8 +15,6 @@ import kotlinx.serialization.json.Json
 import mu.KotlinLogging
 import java.nio.file.Paths
 
-@FlowPreview
-@ExperimentalCoroutinesApi
 class ConfigService(
     private val json: Json
 ) {

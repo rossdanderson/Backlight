@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.asFlow
 @ExperimentalCoroutinesApi
 class PortSelectViewModel : BaseViewModel() {
 
-    data class ConnectionFailedAlertEvent(val portDescriptor: String)
+    data class ConnectionFailedAlertEvent(val portDescriptor: String, val reason: String)
 
     private val serialService by di<ISerialService>()
     private val configService by di<ConfigService>()
@@ -29,13 +29,13 @@ class PortSelectViewModel : BaseViewModel() {
     val closeEventFlow = closeEventBroadcastChannel.asFlow()
 
     val connectCommand = command<String> { portDescriptor ->
-        when (serialService.connect(portDescriptor)) {
-            ConnectResult.Success -> {
+        when (val connectResult = serialService.connect(portDescriptor)) {
+            is ConnectResult.Success -> {
                 closeEventBroadcastChannel.offer(Unit)
                 configService.set(defaultPortLens, portDescriptor)
             }
-            ConnectResult.Failure -> connectionFailedAlertEventBroadcastChannel
-                .offer(ConnectionFailedAlertEvent(portDescriptor))
+            is ConnectResult.Failure -> connectionFailedAlertEventBroadcastChannel
+                .offer(ConnectionFailedAlertEvent(portDescriptor, connectResult.reason))
         }
     }
 }

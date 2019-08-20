@@ -2,8 +2,11 @@
 
 package com.github.rossdanderson.backlight
 
+import com.github.rossdanderson.backlight.binding.LEDToSerialBinding
 import com.github.rossdanderson.backlight.config.ConfigService
-import com.github.rossdanderson.backlight.screen.ScreenService
+import com.github.rossdanderson.backlight.led.LEDService
+import com.github.rossdanderson.backlight.screen.IScreenService
+import com.github.rossdanderson.backlight.screen.RobotScreenService
 import com.github.rossdanderson.backlight.serial.SerialService
 import com.github.rossdanderson.backlight.serial.mock.MockSerialService
 import com.github.rossdanderson.backlight.ui.BacklightApp
@@ -46,7 +49,9 @@ fun main() = runBlocking {
                 single { Json(JsonConfiguration.Default.copy(prettyPrint = true)) }
                 single { EventBus<Any>() }
                 single { ConfigService(get()).apply { initialise() } }
-                single { ScreenService(get()) }
+                single<IScreenService> { RobotScreenService(get()) }
+                single { LEDService(get(), get(), get()) }
+                single { LEDToSerialBinding(get(), get(), scope).apply { initialise() } }
                 single {
                     if (getPropertyOrNull<String>("mock-serial-connection")?.toBoolean() == true) MockSerialService()
                     else SerialService(scope)

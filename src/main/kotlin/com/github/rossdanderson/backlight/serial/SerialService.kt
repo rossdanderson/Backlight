@@ -5,7 +5,7 @@ package com.github.rossdanderson.backlight.serial
 import com.fazecast.jSerialComm.SerialPort
 import com.github.rossdanderson.backlight.cobsEncode
 import com.github.rossdanderson.backlight.messages.*
-import com.github.rossdanderson.backlight.serial.ConnectionState.Disconnected
+import com.github.rossdanderson.backlight.serial.ConnectionState.*
 import com.github.rossdanderson.backlight.serial.SerialService.ConnectionActorMessage.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BroadcastChannel
@@ -47,45 +47,60 @@ class SerialService(scope: CoroutineScope) : ISerialService {
                 null -> {
                     logger.info { "Attempting connecting to ${message.portDescriptor}" }
 
-                    connectionStateChannel.send(ConnectionState.Connecting(message.portDescriptor))
+                    connectionStateChannel.send(Connecting(message.portDescriptor))
 
                     val attemptSerialPort = SerialPort.getCommPort(message.portDescriptor)
+                        ?.apply {
+                            baudRate = 115200
+                            setComPortTimeouts(SerialPort.TIMEOUT_WRITE_BLOCKING, 1000, 1000)
+                        }
 
-                    val handshakeResponse = if (attemptSerialPort?.openPort(0) == true) {
-                        delay(5000)
+                    if (attemptSerialPort != null) {
+                        if (attemptSerialPort.openPort()) {
+                            delay(5000)
 
-                        logger.info { "Port opened to ${message.portDescriptor}" }
+                            logger.info { "Port opened to ${message.portDescriptor}" }
 
-                        serialPort = attemptSerialPort
+                            serialPort = attemptSerialPort
 
-                        attemptSerialPort.addDataListener(MessageListener(receiveFlowChannel))
+                            attemptSerialPort.addDataListener(MessageListener(receiveFlowChannel))
 
-                        val deferredHandshakeResponse =
-                            async { receiveFlow.filterIsInstance<HandshakeResponseMessage>().first() }
-                        attemptSerialPort.writeMessage(HandshakeRequestMessage)
+                            val deferredHandshakeResponse =
+                                async { receiveFlow.filterIsInstance<HandshakeResponseMessage>().first() }
+                            attemptSerialPort.writeMessage(HandshakeRequestMessage)
 
-                        withTimeoutOrNull(1000) { deferredHandshakeResponse.await() }
-                    } else null
+                            val handshakeResponse = withTimeoutOrNull(1000) { deferredHandshakeResponse.await() }
 
-                    if (handshakeResponse != null) {
-                        logger.info { "Connected to ${message.portDescriptor}" }
-                        connectionStateChannel.send(
-                            ConnectionState.Connected(
-                                message.portDescriptor,
-                                handshakeResponse.ledCount
-                            )
-                        )
-                        ConnectResult.Success
+                            if (handshakeResponse != null) {
+                                logger.info { "Connected to ${message.portDescriptor}" }
+                                connectionStateChannel.send(
+                                    Connected(
+                                        message.portDescriptor,
+                                        handshakeResponse.ledCount
+                                    )
+                                )
+                                ConnectResult.Success
+                            } else {
+                                logger.warn { "Cannot connect to ${message.portDescriptor} - handshake failed" }
+                                connectionStateChannel.send(Disconnected)
+                                ConnectResult.Failure("Handshake failed")
+                            }
+                        } else {
+                            logger.warn { "Cannot connect to ${message.portDescriptor} - unable to open port" }
+                            connectionStateChannel.send(Disconnected)
+                            ConnectResult.Failure("Unable to open port")
+                        }
                     } else {
-                        logger.warn { "Cannot connect to ${message.portDescriptor}" }
-                        ConnectResult.Failure
+                        logger.warn { "Cannot connect to ${message.portDescriptor} - unable to find port" }
+                        connectionStateChannel.send(Disconnected)
+                        ConnectResult.Failure("Unable to find port")
                     }
                 }
                 else -> {
                     logger.warn {
                         "Cannot connect to ${message.portDescriptor} - already connected to ${currentSerialPort.descriptivePortName}"
                     }
-                    ConnectResult.Failure
+                    ConnectResult.Failure("Already connected to ${currentSerialPort.descriptivePortName}")
                 }
             }
             message.response.complete(connectResult)
