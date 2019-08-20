@@ -9,7 +9,7 @@ inline class WriteAllMessage(
 ) : Message {
 
     companion object {
-        fun from(
+        operator fun invoke(
             ledCount: Int,
             colors: Iterable<UColor>
         ): WriteAllMessage {

@@ -8,7 +8,6 @@ import kotlinx.serialization.Transient
 data class Config(
     val defaultPort: String? = null,
     val minDelayMillis: Long = 50,
-    val ledCount: Int = 60,
     val saturationAlpha: Double = 1.5,
     val contrast: Double = 7.0
 ) {
@@ -24,11 +23,6 @@ data class Config(
         val minDelayMillisLens = Lens<Config, Long>(
             get = { s -> s.minDelayMillis },
             set = { s, a -> s.copy(minDelayMillis = a) }
-        )
-
-        val ledCountLens = Lens<Config, Int>(
-            get = { s -> s.ledCount },
-            set = { s, a -> s.copy(ledCount = a) }
         )
 
         val saturationAlphaLens = Lens<Config, Double>(

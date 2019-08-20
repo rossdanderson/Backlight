@@ -3,26 +3,26 @@
 package com.github.rossdanderson.backlight.serial
 
 import com.fazecast.jSerialComm.SerialPort
-import com.fazecast.jSerialComm.SerialPort.LISTENING_EVENT_DATA_RECEIVED
-import com.fazecast.jSerialComm.SerialPortEvent
-import com.fazecast.jSerialComm.SerialPortMessageListener
 import com.github.rossdanderson.backlight.cobsEncode
-import com.github.rossdanderson.backlight.messages.Message
-import com.github.rossdanderson.backlight.serial.ConnectResult.Failure
-import com.github.rossdanderson.backlight.serial.ConnectResult.Success
-import com.github.rossdanderson.backlight.serial.ConnectionState.Connected
+import com.github.rossdanderson.backlight.messages.*
 import com.github.rossdanderson.backlight.serial.ConnectionState.Disconnected
 import com.github.rossdanderson.backlight.serial.SerialService.ConnectionActorMessage.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.*
+import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
+import kotlinx.coroutines.channels.ConflatedBroadcastChannel
+import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.flow.*
 import mu.KotlinLogging
-import java.nio.charset.Charset
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 class SerialService(scope: CoroutineScope) : ISerialService {
 
     private val logger = KotlinLogging.logger {}
+    private val lastHeartbeatSent = AtomicLong()
+    private val sendHeartbeat = AtomicBoolean()
+    private val sendHeartbeatAck = AtomicBoolean()
 
     sealed class ConnectionActorMessage {
         data class Connect(
@@ -34,77 +34,95 @@ class SerialService(scope: CoroutineScope) : ISerialService {
             val response: CompletableJob
         ) : ConnectionActorMessage()
 
-        object SendHeartbeat : ConnectionActorMessage()
-
         data class SendMessage(
             val message: Message
         ) : ConnectionActorMessage()
     }
 
-    data class SerialPortConnection(
-        val serialPort: SerialPort,
-        val receiveJob: Job
-    )
-
     private val connectionActor = scope.actor<ConnectionActorMessage>(Dispatchers.IO, BUFFERED) {
-        var serialPortConnection: SerialPortConnection? = null
+        var serialPort: SerialPort? = null
 
-        channel.consumeEach { message ->
-            when (message) {
-                is Connect -> {
-                    val result = when (val currentSerialPortConnection = serialPortConnection) {
-                        null -> {
-                            logger.info { "Attempting connecting to ${message.portDescriptor}" }
+        suspend fun handleConnect(message: Connect) {
+            val connectResult = when (val currentSerialPort = serialPort) {
+                null -> {
+                    logger.info { "Attempting connecting to ${message.portDescriptor}" }
 
-                            val attemptSerialPort = SerialPort.getCommPort(message.portDescriptor)
+                    connectionStateChannel.send(ConnectionState.Connecting(message.portDescriptor))
 
-                            val result = attemptSerialPort
-                                ?.openPort(0)
-                                ?.let { connected ->
-                                    // TODO perform handshake
-                                    if (connected) Success else Failure
-                                } ?: Failure
+                    val attemptSerialPort = SerialPort.getCommPort(message.portDescriptor)
 
-                            if (result is Success) {
-                                logger.info { "Connected to ${message.portDescriptor}" }
-                                serialPortConnection = SerialPortConnection(
-                                    attemptSerialPort,
-                                    launch { attemptSerialPort.receiveFlow.collect { receiveFlowChannel.offer(it) } }
-                                )
+                    val handshakeResponse = if (attemptSerialPort?.openPort(0) == true) {
+                        delay(5000)
 
-                                connectionStateChannel.send(Connected(message.portDescriptor))
-                            } else {
-                                logger.warn { "Cannot connect to ${message.portDescriptor}" }
-                            }
-                            result
-                        }
-                        else -> {
-                            val serialPort = currentSerialPortConnection.serialPort
-                            logger.warn { "Cannot connect to ${message.portDescriptor} - already connected to ${serialPort.descriptivePortName}" }
-                            Failure
-                        }
+                        logger.info { "Port opened to ${message.portDescriptor}" }
+
+                        serialPort = attemptSerialPort
+
+                        attemptSerialPort.addDataListener(MessageListener(receiveFlowChannel))
+
+                        val deferredHandshakeResponse =
+                            async { receiveFlow.filterIsInstance<HandshakeResponseMessage>().first() }
+                        attemptSerialPort.writeMessage(HandshakeRequestMessage)
+
+                        withTimeoutOrNull(1000) { deferredHandshakeResponse.await() }
+                    } else null
+
+                    if (handshakeResponse != null) {
+                        logger.info { "Connected to ${message.portDescriptor}" }
+                        connectionStateChannel.send(
+                            ConnectionState.Connected(
+                                message.portDescriptor,
+                                handshakeResponse.ledCount
+                            )
+                        )
+                        ConnectResult.Success
+                    } else {
+                        logger.warn { "Cannot connect to ${message.portDescriptor}" }
+                        ConnectResult.Failure
                     }
-                    message.response.complete(result)
                 }
-                is Disconnect -> {
-                    when (val currentSerialPortConnection = serialPortConnection) {
-                        null -> logger.warn { "Cannot disconnect - not currently connected" }
-                        else -> {
-                            currentSerialPortConnection.receiveJob.cancel()
-                            val serialPort = currentSerialPortConnection.serialPort
-                            serialPort.closePort()
-                            logger.info { "Disconnected from ${serialPort.descriptivePortName}" }
-                            serialPortConnection = null
-                        }
+                else -> {
+                    logger.warn {
+                        "Cannot connect to ${message.portDescriptor} - already connected to ${currentSerialPort.descriptivePortName}"
                     }
-                    message.response.complete()
-                }
-                SendHeartbeat -> TODO()
-                is SendMessage -> when (val currentSerialPortConnection = serialPortConnection) {
-                    null -> logger.warn { "Message dropped - ${message.message} - not currently connected" }
-                    else -> currentSerialPortConnection.serialPort.writeMessage(message.message)
+                    ConnectResult.Failure
                 }
             }
+            message.response.complete(connectResult)
+        }
+
+        suspend fun handleDisconnect(message: Disconnect) {
+            when (val currentSerialPort = serialPort) {
+                null -> logger.warn { "Cannot disconnect - not currently connected" }
+                else -> {
+                    connectionStateChannel.send(Disconnected)
+                    currentSerialPort.removeDataListener()
+                    currentSerialPort.closePort()
+                    logger.info { "Disconnected from ${currentSerialPort.descriptivePortName}" }
+                    serialPort = null
+                }
+            }
+            message.response.complete()
+        }
+
+        fun handleSendMessage(message: SendMessage) {
+            when (val currentSerialPort = serialPort) {
+                null -> logger.warn { "Message dropped - ${message.message} - not currently connected" }
+                else -> currentSerialPort.writeMessage(message.message)
+            }
+        }
+
+        while (true) {
+            when {
+                sendHeartbeat.getAndSet(false) -> serialPort?.writeMessage(HeartbeatMessage)
+                sendHeartbeatAck.getAndSet(false) -> serialPort?.writeMessage(HeartbeatAckMessage)
+                else -> when (val message = channel.receiveOrNull()) {
+                    is Connect -> handleConnect(message)
+                    is Disconnect -> handleDisconnect(message)
+                    is SendMessage -> handleSendMessage(message)
+                }
+            }
+            yield()
         }
     }
 
@@ -131,8 +149,9 @@ class SerialService(scope: CoroutineScope) : ISerialService {
     private val connectionStateChannel = ConflatedBroadcastChannel<ConnectionState>(Disconnected)
     override val connectionStateFlow: Flow<ConnectionState> = connectionStateChannel.asFlow().distinctUntilChanged()
 
-    private val receiveFlowChannel = BroadcastChannel<ReceiveMessage>(BUFFERED)
-    override val receiveFlow: Flow<ReceiveMessage> = receiveFlowChannel.asFlow()
+
+    private val receiveFlowChannel = BroadcastChannel<Message>(BUFFERED)
+    override val receiveFlow: Flow<Message> = receiveFlowChannel.asFlow()
 
     override suspend fun send(message: Message) {
         connectionActor.send(SendMessage(message))
@@ -145,26 +164,4 @@ class SerialService(scope: CoroutineScope) : ISerialService {
         val bytes = encoded + 0u.toUByte().toByte()
         if (writeBytes(bytes, bytes.size.toLong()) == -1) throw IllegalStateException("Failure to write")
     }
-
-    private val SerialPort.receiveFlow: Flow<ReceiveMessage>
-        get() = callbackFlow<SerialPortEvent> {
-            val success = addDataListener(
-                object : SerialPortMessageListener {
-                    override fun delimiterIndicatesEndOfMessage(): Boolean = true
-
-                    override fun getMessageDelimiter(): ByteArray = "\n".toByteArray(Charset.forName("ASCII"))
-
-                    override fun serialEvent(event: SerialPortEvent) {
-                        offer(event)
-                    }
-
-                    override fun getListeningEvents(): Int = LISTENING_EVENT_DATA_RECEIVED
-                }
-            )
-            awaitClose { removeDataListener() }
-
-            if (!success) close()
-        }
-            .buffer()
-            .map { it.toString() }
 }

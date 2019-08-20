@@ -5,15 +5,13 @@ package com.github.rossdanderson.backlight.serial
 import com.github.rossdanderson.backlight.messages.Message
 import kotlinx.coroutines.flow.Flow
 
-typealias ReceiveMessage = String
-
 interface ISerialService {
 
     val connectionStateFlow: Flow<ConnectionState>
 
     val availablePortDescriptorsFlow: Flow<List<String>>
 
-    val receiveFlow: Flow<ReceiveMessage>
+    val receiveFlow: Flow<Message>
 
     suspend fun connect(portDescriptor: String): ConnectResult
 

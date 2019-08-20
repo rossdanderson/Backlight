@@ -1,4 +1,4 @@
-package com.github.rossdanderson.backlight.screensample
+package com.github.rossdanderson.backlight.screen
 
 import com.github.rossdanderson.backlight.applyContrast
 import com.github.rossdanderson.backlight.applySaturation
@@ -8,6 +8,8 @@ import com.github.rossdanderson.backlight.data.IntRange2D
 import com.github.rossdanderson.backlight.data.UColor
 import com.github.rossdanderson.backlight.flattenSwitch
 import com.github.rossdanderson.backlight.greyscaleLuminosity
+import com.github.rossdanderson.backlight.serial.ConnectionState
+import com.github.rossdanderson.backlight.serial.SerialService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -23,8 +25,9 @@ import java.awt.image.BufferedImage
 @FlowPreview
 @ExperimentalUnsignedTypes
 @ExperimentalCoroutinesApi
-class ScreenSampleService(
-    configService: ConfigService
+class ScreenService(
+    configService: ConfigService,
+    serialService: SerialService
 ) {
     private val robot = Robot()
 
@@ -33,9 +36,15 @@ class ScreenSampleService(
     // TODO Should listen for changes
     private val screenDimensionsFlow: Flow<Dimension> = flowOf(Toolkit.getDefaultToolkit().screenSize)
 
-    // TODO replace with Focused flow
+    private val ledCountFlow = flowOf(
+        flowOf(10),
+        serialService.connectionStateFlow
+            .filterIsInstance<ConnectionState.Connected>()
+            .map { it.ledCount }
+            .distinctUntilChanged()
+    ).flattenConcat()
+
     private val minDelayMillisFlow = configService.configFlow.map { it.minDelayMillis }.distinctUntilChanged()
-    private val ledCountFlow = configService.configFlow.map { it.ledCount }.distinctUntilChanged()
     private val contrastFactorFlow = configService.configFlow.map { it.contrastFactor }.distinctUntilChanged()
     private val saturationAlphaFlow = configService.configFlow.map { it.saturationAlpha }.distinctUntilChanged()
 

@@ -1,7 +1,7 @@
 package com.github.rossdanderson.backlight.ui
 
 import com.github.rossdanderson.backlight.config.ConfigService
-import com.github.rossdanderson.backlight.screensample.ScreenSampleService
+import com.github.rossdanderson.backlight.screen.ScreenService
 import com.github.rossdanderson.backlight.serial.ISerialService
 import com.github.rossdanderson.backlight.ui.MainViewModel.MainEvent.ShowPortSelectModalEvent
 import com.github.rossdanderson.backlight.ui.base.BaseViewModel
@@ -25,7 +25,7 @@ class MainViewModel : BaseViewModel() {
     private val logger = KotlinLogging.logger { }
     private val configService by di<ConfigService>()
     private val serialService by di<ISerialService>()
-    private val screenSampleService by di<ScreenSampleService>()
+    private val screenSampleService by di<ScreenService>()
 
     val showPortSelectEventFlow = configService.configFlow
         .map { it.defaultPort }
