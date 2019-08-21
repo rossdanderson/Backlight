@@ -86,6 +86,7 @@ class LEDService(
                         .toList()
                 }
         }
+        .distinctUntilChanged()
         .conflate()
 
     private fun offsetIntRange(start: Int, length: Int): IntRange = start until (start + length)

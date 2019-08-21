@@ -4,13 +4,15 @@ package com.github.rossdanderson.backlight.config
 
 import com.github.rossdanderson.backlight.data.Lens
 import com.github.rossdanderson.backlight.data.Setter
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import mu.KotlinLogging
 import java.nio.file.Paths
@@ -28,25 +30,23 @@ class ConfigService(
         private val path = Paths.get("${System.getProperty("user.home")}/.backlight.json").toAbsolutePath()
     }
 
-    fun initialise() {
-        runBlocking {
-            val file = path.toFile()
-            if (file.exists()) {
-                runCatching {
-                    file.bufferedReader().use {
-                        val text = it.readText()
-                        val config = json.parse(Config.serializer(), text)
-                        logger.info { "Loaded $config" }
-                        publish(config)
-                    }
-                }.recover {
-                    logger.warn(it) { "Unable to load config from $path - using defaults" }
-                    persistAndPublish(Config())
+    suspend fun initialise() {
+        val file = path.toFile()
+        if (file.exists()) {
+            runCatching {
+                file.bufferedReader().use {
+                    val text = it.readText()
+                    val config = json.parse(Config.serializer(), text)
+                    logger.info { "Loaded $config" }
+                    publish(config)
                 }
-            } else {
-                logger.info { "No config found at $path - using defaults" }
+            }.recover {
+                logger.warn(it) { "Unable to load config from $path - using defaults" }
                 persistAndPublish(Config())
             }
+        } else {
+            logger.info { "No config found at $path - using defaults" }
+            persistAndPublish(Config())
         }
     }
 

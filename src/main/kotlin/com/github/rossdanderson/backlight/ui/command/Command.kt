@@ -44,8 +44,6 @@ class ParameterisedCommand<in T> internal constructor(
     }
 }
 
-@ExperimentalCoroutinesApi
-@FlowPreview
 fun <T> command(
     enabled: BooleanExpression = SimpleBooleanProperty(true),
     debounce: Duration? = null,
@@ -53,8 +51,6 @@ fun <T> command(
     action: suspend CoroutineScope.(T) -> Unit
 ): ParameterisedCommand<T> = ParameterisedCommand(enabled, debounce, disableWhileRunning, action)
 
-@ExperimentalCoroutinesApi
-@FlowPreview
 fun command(
     enabled: BooleanExpression = SimpleBooleanProperty(true),
     debounce: Duration? = null,

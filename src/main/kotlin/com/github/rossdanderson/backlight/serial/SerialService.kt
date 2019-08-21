@@ -49,11 +49,12 @@ class SerialService(scope: CoroutineScope) : ISerialService {
 
                     connectionStateChannel.send(Connecting(message.descriptivePortName))
 
-                    val attemptSerialPort = SerialPort.getCommPorts().singleOrNull { it.descriptivePortName == message.descriptivePortName }
-                        ?.apply {
-                            baudRate = 115200
-                            setComPortTimeouts(SerialPort.TIMEOUT_WRITE_BLOCKING, 1000, 1000)
-                        }
+                    val attemptSerialPort =
+                        SerialPort.getCommPorts().singleOrNull { it.descriptivePortName == message.descriptivePortName }
+                            ?.apply {
+                                baudRate = 115200
+                                setComPortTimeouts(SerialPort.TIMEOUT_WRITE_BLOCKING, 1000, 1000)
+                            }
 
                     if (attemptSerialPort != null) {
                         if (attemptSerialPort.openPort()) {
@@ -67,8 +68,8 @@ class SerialService(scope: CoroutineScope) : ISerialService {
                                 async { receiveFlow.filterIsInstance<HandshakeResponseMessage>().first() }
                             attemptSerialPort.writeMessage(HandshakeRequestMessage)
 
-                            val handshakeResponse = withTimeoutOrNull(1000) { deferredHandshakeResponse.await() } ?: HandshakeResponseMessage(
-                                ubyteArrayOf(5u, 60u))
+                            val handshakeResponse = withTimeoutOrNull(1000) { deferredHandshakeResponse.await() }
+                                ?: HandshakeResponseMessage(ubyteArrayOf(5u, 60u)) // TODO Remove
 
                             if (handshakeResponse != null) {
                                 logger.info { "Connected to ${message.descriptivePortName}" }

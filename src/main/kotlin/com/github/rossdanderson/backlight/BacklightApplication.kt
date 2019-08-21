@@ -2,16 +2,16 @@
 
 package com.github.rossdanderson.backlight
 
-import com.github.rossdanderson.backlight.binding.LEDToSerialBinding
 import com.github.rossdanderson.backlight.config.ConfigService
+import com.github.rossdanderson.backlight.daemon.DaemonJobManager
 import com.github.rossdanderson.backlight.led.LEDService
 import com.github.rossdanderson.backlight.screen.IScreenService
 import com.github.rossdanderson.backlight.screen.RobotScreenService
 import com.github.rossdanderson.backlight.serial.SerialService
 import com.github.rossdanderson.backlight.serial.mock.MockSerialService
 import com.github.rossdanderson.backlight.ui.BacklightApp
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
@@ -39,16 +39,8 @@ object KoinKotlinLogger : Logger() {
 }
 
 fun main() {
-    runBlocking {
+    runBlocking(Dispatchers.Default) {
         val scope = this@runBlocking
-
-        launch {
-            while (true) {
-                println("Thing1")
-                delay(1000)
-            }
-        }
-
 
         val koinApplication = startKoin {
 
@@ -59,38 +51,32 @@ fun main() {
             modules(
                 module {
                     single { Json(JsonConfiguration.Default.copy(prettyPrint = true)) }
-                    single { EventBus<Any>() }
-                    single { ConfigService(get()).apply { initialise() } }
+                    single {
+                        ConfigService(get())
+                            .apply { runBlocking { initialise() } }
+                    }
                     single<IScreenService> { RobotScreenService(get()) }
                     single { LEDService(get(), get(), get()) }
-                    single(createdAtStart = true) { LEDToSerialBinding(get(), get(), scope).apply { launch {initialise() } } }
                     single {
                         if (getPropertyOrNull<String>("mock-serial-connection")?.toBoolean() == true) MockSerialService()
                         else SerialService(scope)
+                    }
+
+                    single(createdAtStart = true) {
+                        DaemonJobManager(get(), get(), get(), GlobalScope)
+                            .apply { initialise() }
                     }
                 }
             )
         }
 
+        val koin = koinApplication.koin
+
         FX.dicontainer = object : DIContainer {
-            override fun <T : Any> getInstance(type: KClass<T>): T =
-                koinApplication.koin.get(type, null, null)
+            override fun <T : Any> getInstance(type: KClass<T>): T = koin.get(type, null, null)
         }
 
-        launch {
-            while (true) {
-                println("Thing")
-                delay(1000)
-            }
-        }
-
+        // This blocks for the duration
         launch<BacklightApp>()
-
-        launch {
-            while (true) {
-                println("Thing2")
-                delay(1000)
-            }
-        }
     }
 }
