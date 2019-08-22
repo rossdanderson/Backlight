@@ -1,9 +1,10 @@
 @file:Suppress("EXPERIMENTAL_API_USAGE")
 
-package com.github.rossdanderson.backlight.screen
+package com.github.rossdanderson.backlight.screen.robot
 
 import com.github.rossdanderson.backlight.config.ConfigService
 import com.github.rossdanderson.backlight.flattenSwitch
+import com.github.rossdanderson.backlight.screen.IScreenService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*

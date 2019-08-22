@@ -2,28 +2,31 @@
 
 package com.github.rossdanderson.backlight.messages
 
-/*
-Message headers
- */
-const val writeLED: UByte = 0u
-const val writeAll: UByte = 1u
-const val heartbeat: UByte = 2u
-const val heartbeatAck: UByte = 3u
-const val handshakeRequest: UByte = 4u
-const val handshakeResponse: UByte = 5u
+import com.github.rossdanderson.backlight.messages.Header.*
+
+enum class Header {
+    WRITE_LED,
+    WRITE_ALL,
+    HEARTBEAT,
+    HEARTBEAT_ACK,
+    HANDSHAKE_REQUEST,
+    HANDSHAKE_RESPONSE;
+
+    fun toUByte(): UByte = ordinal.toUByte()
+}
 
 interface Message {
     val backingArray: UByteArray
 
     companion object {
         fun from(uByteArray: UByteArray): Message {
-            return when (val header = uByteArray[0]) {
-                writeLED -> WriteLEDMessage(uByteArray)
-                writeAll -> WriteAllMessage(uByteArray)
-                heartbeat -> HeartbeatMessage
-                heartbeatAck -> HeartbeatAckMessage
-                handshakeRequest -> HandshakeRequestMessage
-                handshakeResponse -> HandshakeResponseMessage(uByteArray)
+            return when (val header = values()[uByteArray[0].toInt()]) {
+                WRITE_LED -> WriteLEDMessage(uByteArray)
+                WRITE_ALL -> WriteAllMessage(uByteArray)
+                HEARTBEAT -> HeartbeatMessage
+                HEARTBEAT_ACK -> HeartbeatAckMessage
+                HANDSHAKE_REQUEST -> HandshakeRequestMessage
+                HANDSHAKE_RESPONSE -> HandshakeResponseMessage(uByteArray)
                 else -> throw IllegalArgumentException("Unknown message type $header")
             }
         }

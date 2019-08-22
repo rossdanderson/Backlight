@@ -2,6 +2,8 @@
 
 package com.github.rossdanderson.backlight.messages
 
+import com.github.rossdanderson.backlight.messages.Header.WRITE_LED
+
 inline class WriteLEDMessage(
     override val backingArray: UByteArray
 ) : Message {
@@ -12,7 +14,7 @@ inline class WriteLEDMessage(
         blue: UByte
     ) : this(
         ubyteArrayOf(
-            writeLED,
+            WRITE_LED.toUByte(),
             index,
             red,
             green,

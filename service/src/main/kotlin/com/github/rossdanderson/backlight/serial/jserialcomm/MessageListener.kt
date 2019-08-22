@@ -1,6 +1,6 @@
 @file:Suppress("EXPERIMENTAL_API_USAGE")
 
-package com.github.rossdanderson.backlight.serial
+package com.github.rossdanderson.backlight.serial.jserialcomm
 
 import com.fazecast.jSerialComm.SerialPort.LISTENING_EVENT_DATA_RECEIVED
 import com.fazecast.jSerialComm.SerialPortEvent

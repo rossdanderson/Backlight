@@ -1,12 +1,15 @@
 @file:Suppress("EXPERIMENTAL_API_USAGE", "EXPERIMENTAL_OVERRIDE", "EXPERIMENTAL_UNSIGNED_LITERALS")
 
-package com.github.rossdanderson.backlight.serial
+package com.github.rossdanderson.backlight.serial.jserialcomm
 
 import com.fazecast.jSerialComm.SerialPort
 import com.github.rossdanderson.backlight.cobsEncode
 import com.github.rossdanderson.backlight.messages.*
+import com.github.rossdanderson.backlight.serial.ConnectResult
+import com.github.rossdanderson.backlight.serial.ConnectionState
 import com.github.rossdanderson.backlight.serial.ConnectionState.*
-import com.github.rossdanderson.backlight.serial.SerialService.ConnectionActorMessage.*
+import com.github.rossdanderson.backlight.serial.ISerialService
+import com.github.rossdanderson.backlight.serial.jserialcomm.JSerialCommService.ConnectionActorMessage.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
@@ -17,7 +20,7 @@ import mu.KotlinLogging
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
-class SerialService(scope: CoroutineScope) : ISerialService {
+class JSerialCommService(scope: CoroutineScope) : ISerialService {
 
     private val logger = KotlinLogging.logger {}
     private val lastHeartbeatSent = AtomicLong()
@@ -69,7 +72,6 @@ class SerialService(scope: CoroutineScope) : ISerialService {
                             attemptSerialPort.writeMessage(HandshakeRequestMessage)
 
                             val handshakeResponse = withTimeoutOrNull(1000) { deferredHandshakeResponse.await() }
-                                ?: HandshakeResponseMessage(ubyteArrayOf(5u, 60u)) // TODO Remove
 
                             if (handshakeResponse != null) {
                                 logger.info { "Connected to ${message.descriptivePortName}" }
@@ -147,7 +149,7 @@ class SerialService(scope: CoroutineScope) : ISerialService {
     override val availablePortDescriptorsFlow: Flow<List<String>> =
         flow {
             while (true) {
-                emit(Signal)
+                emit(Unit)
                 delay(5000)
             }
         }

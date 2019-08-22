@@ -6,8 +6,8 @@ import com.github.rossdanderson.backlight.config.ConfigService
 import com.github.rossdanderson.backlight.daemon.DaemonJobManager
 import com.github.rossdanderson.backlight.led.LEDService
 import com.github.rossdanderson.backlight.screen.IScreenService
-import com.github.rossdanderson.backlight.screen.RobotScreenService
-import com.github.rossdanderson.backlight.serial.SerialService
+import com.github.rossdanderson.backlight.screen.robot.RobotScreenService
+import com.github.rossdanderson.backlight.serial.jserialcomm.JSerialCommService
 import com.github.rossdanderson.backlight.serial.mock.MockSerialService
 import com.github.rossdanderson.backlight.ui.BacklightApp
 import kotlinx.coroutines.Dispatchers
@@ -59,7 +59,7 @@ fun main() {
                     single { LEDService(get(), get(), get()) }
                     single {
                         if (getPropertyOrNull<String>("mock-serial-connection")?.toBoolean() == true) MockSerialService()
-                        else SerialService(scope)
+                        else JSerialCommService(scope)
                     }
 
                     single(createdAtStart = true) {

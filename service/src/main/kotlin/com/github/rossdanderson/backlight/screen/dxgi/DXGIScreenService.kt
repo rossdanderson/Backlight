@@ -1,7 +1,8 @@
 @file:Suppress("EXPERIMENTAL_API_USAGE")
 
-package com.github.rossdanderson.backlight.screen
+package com.github.rossdanderson.backlight.screen.dxgi
 
+import com.github.rossdanderson.backlight.screen.IScreenService
 import kotlinx.coroutines.flow.Flow
 import java.awt.image.BufferedImage
 
