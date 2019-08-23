@@ -3,7 +3,10 @@
 package com.github.rossdanderson.backlight
 
 import com.fazecast.jSerialComm.SerialPort
-import com.fazecast.jSerialComm.SerialPort.*
+import com.fazecast.jSerialComm.SerialPort.TIMEOUT_WRITE_BLOCKING
+import com.fazecast.jSerialComm.SerialPort.getCommPorts
+import com.fazecast.jSerialComm.SerialPortEvent
+import com.fazecast.jSerialComm.SerialPortMessageListener
 import com.github.rossdanderson.backlight.messages.Message
 import com.github.rossdanderson.backlight.messages.WriteAllMessage
 import com.github.rossdanderson.backlight.messages.writeAll
@@ -12,26 +15,44 @@ import kotlinx.coroutines.runBlocking
 import java.awt.Rectangle
 import java.awt.Robot
 import java.awt.Toolkit
+import java.lang.Thread.sleep
 import java.nio.charset.Charset
 import java.time.Duration
 import java.time.Instant
 import kotlin.Result.Companion.success
 import kotlin.streams.toList
 
+
 private const val ledCount = 60
+
+private class MessageListener : SerialPortMessageListener {
+    override fun getListeningEvents(): Int {
+        return SerialPort.LISTENING_EVENT_DATA_RECEIVED
+    }
+
+    override fun getMessageDelimiter(): ByteArray {
+        return byteArrayOf(0)
+    }
+
+    override fun delimiterIndicatesEndOfMessage(): Boolean {
+        return true
+    }
+
+    override fun serialEvent(event: SerialPortEvent) {
+        val encoded = event.receivedData!!
+        val decoded = encoded.cobsDecode()
+        println("-> rx dec: ${decoded.take(decoded.size).toByteArray().contentToString()} (${decoded.size})")
+        println("-> rx enc: ${encoded.contentToString()} (${encoded.size})")
+        println("-> rx str: ${decoded.toString(Charset.forName("ASCII"))}")
+        println()
+    }
+}
 
 fun main() = runBlocking {
     println("Write LED ($writeLED) messages will be ${3 + 1} bytes")
     println("Write all ($writeAll) messages will be ${ledCount * 3 + 1} bytes")
 
     val serialPort = selectSerialPort()
-
-    serialPort.addDataListener(LISTENING_EVENT_DATA_RECEIVED) {
-        val message = it.receivedData!!.toString(Charset.forName("ASCII")).dropLast(1)
-        if (message.contains("ignoring", ignoreCase = true)) {
-            System.err.println("Response -> $message")
-        }
-    }
 
     val robot = Robot()
 
@@ -84,7 +105,7 @@ fun main() = runBlocking {
             }
             .sequential()
             .toList()
-            .let { serialPort.writeMessage(WriteAllMessage.from(ledCount, it)) }
+            .let { serialPort.writeMessage(WriteAllMessage.from(it)) }
 
         println("Full update took: ${Duration.between(start, Instant.now()).toMillis()}ms")
 
@@ -96,16 +117,16 @@ private fun captureScreen(robot: Robot, screenRect: Rectangle): FastRGB {
     val captureStart = Instant.now()
     val screenCapture = FastRGB(robot.createScreenCapture(screenRect))
     println("Capture took :${Duration.between(captureStart, Instant.now()).toMillis()}ms")
-
     return screenCapture
 }
 
 private fun SerialPort.writeMessage(message: Message) {
-    val backingArray = message.backingArray
-    println("Writing bytes ${backingArray.contentToString()}")
-    val encoded = backingArray.cobsEncode().toByteArray()
-    val bytes = encoded + 0u.toUByte().toByte()
-    if (writeBytes(bytes, bytes.size.toLong()) == -1) throw IllegalStateException("Failure to write")
+    val decoded = message.backingArray.toByteArray()
+    println("<- tx dec: ${decoded.contentToString()} (${decoded.size})")
+    val encoded = decoded.cobsEncode()
+    println("<- tx enc: ${encoded.contentToString()} (${encoded.size})")
+    if (writeBytes(encoded, encoded.size.toLong()) == -1) throw IllegalStateException("Failure to write")
+    if (writeBytes(byteArrayOf(0), 1L) == -1) throw IllegalStateException("Failure to write")
 }
 
 private tailrec fun selectSerialPort(): SerialPort {
@@ -132,6 +153,8 @@ private tailrec fun selectSerialPort(): SerialPort {
                 baudRate = 115200
                 setComPortTimeouts(TIMEOUT_WRITE_BLOCKING, 1000, 1000)
                 if (!openPort()) throw IllegalStateException("Unable to connect")
+                addDataListener(MessageListener())
+                sleep(5000)
             }
         }
         .onSuccess { println("Connected to ${it.descriptivePortName}") }

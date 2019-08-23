@@ -8,6 +8,7 @@ import com.fazecast.jSerialComm.SerialPortMessageListener
 import java.awt.Color
 import java.nio.charset.Charset
 
+
 fun SerialPort.addDataListener(
     types: Int,
     function: (SerialPortEvent) -> Unit
@@ -39,34 +40,74 @@ fun Int.applyContrast(): Int =
 
 fun Color.greyscaleLuminosity() = red * 0.299 + green * 0.587 + blue * 0.114
 
-fun UByteArray.cobsEncode(): UByteArray {
+fun ByteArray.cobsEncode(
+    size: Int = this.size
+): ByteArray {
     var readIndex = 0
     var writeIndex = 1
     var codeIndex = 0
-    var code: UByte = 1u
+    var code = 1
 
-    val encodedBufferSize = size + size / 254 + 1
-    val encodedBuffer = UByteArray(encodedBufferSize)
+    val encodedBuffer = ByteArray(getEncodedBufferSize(size))
 
     while (readIndex < size) {
-        if (get(readIndex) == 0.toUByte()) {
-            encodedBuffer[codeIndex] = code
-            code = 1u
+        if ((this[readIndex].toInt() and 0xFF) == 0) {
+            encodedBuffer[codeIndex] = code.toByte()
+            code = 1
             codeIndex = writeIndex++
             readIndex++
         } else {
-            encodedBuffer[writeIndex++] = get(readIndex++)
+            encodedBuffer[writeIndex++] = this[readIndex++]
             code++
 
-            if (code == 0xFFu.toUByte()) {
-                encodedBuffer[codeIndex] = code
-                code = 1u
+            if (code == 0xFF) {
+                encodedBuffer[codeIndex] = code.toByte()
+                code = 1
                 codeIndex = writeIndex++
             }
         }
     }
 
-    encodedBuffer[codeIndex] = code
+    encodedBuffer[codeIndex] = code.toByte()
 
-    return encodedBuffer
+    return encodedBuffer.take(writeIndex).toByteArray()
+}
+
+fun ByteArray.cobsDecode(
+    size: Int = this.size
+): ByteArray {
+    if (size == 0)
+        return ByteArray(0)
+
+    var readIndex = 0
+    var writeIndex = 0
+
+    val decodedBuffer = ByteArray(this.size)
+    var code: Int
+    var i: Int
+    while (readIndex < size) {
+        code = this[readIndex].toInt() and 0xFF
+
+        if (readIndex + code > size && code != 1) {
+            return ByteArray(0)
+        }
+
+        readIndex++
+
+        i = 1
+        while (i < code) {
+            decodedBuffer[writeIndex++] = this[readIndex++]
+            i++
+        }
+
+        if (code != 0xFF && readIndex != size) {
+            decodedBuffer[writeIndex++] = 0
+        }
+    }
+
+    return decodedBuffer.take(writeIndex).toByteArray()
+}
+
+fun getEncodedBufferSize(unencodedBufferSize: Int): Int {
+    return unencodedBufferSize.toInt() + unencodedBufferSize / 254 + 1
 }
