@@ -51,9 +51,15 @@ drag_handle
 /target
 
 .gradle
-/build/
-/out/
-/config/
+
+# Build directories
+app/build/
+app/out/
+app/config/
+
+jni/build/
+jni/out/
+jni/config/
 
 # Ignore Gradle GUI config
 gradle-app.setting
@@ -66,3 +72,4 @@ gradle-app.setting
 
 # # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
 # gradle/wrapper/gradle-wrapper.properties
+
