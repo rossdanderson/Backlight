@@ -6,4 +6,8 @@ import com.github.rossdanderson.backlight.messages.Header.HEARTBEAT
 
 object HeartbeatMessage : Message {
     override val backingArray: UByteArray = ubyteArrayOf(HEARTBEAT.toUByte())
+
+    override fun toString(): String {
+        return "HeartbeatMessage()"
+    }
 }

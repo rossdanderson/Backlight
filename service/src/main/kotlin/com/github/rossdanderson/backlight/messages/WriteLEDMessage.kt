@@ -2,6 +2,7 @@
 
 package com.github.rossdanderson.backlight.messages
 
+import com.github.rossdanderson.backlight.data.UColor
 import com.github.rossdanderson.backlight.messages.Header.WRITE_LED
 
 inline class WriteLEDMessage(
@@ -21,4 +22,14 @@ inline class WriteLEDMessage(
             blue
         )
     )
+
+    val index: UByte
+        get() = backingArray[1]
+
+    val color: UColor
+        get() = UColor(backingArray[2], backingArray[3], backingArray[4])
+
+    override fun toString(): String {
+        return "WriteLEDMessage(index='$index', color='$color')"
+    }
 }

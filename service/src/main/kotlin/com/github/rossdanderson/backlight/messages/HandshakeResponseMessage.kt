@@ -12,4 +12,8 @@ inline class HandshakeResponseMessage(
 
     val ledCount: Int
         get() = backingArray[numLedsOffset].toInt()
+
+    override fun toString(): String {
+        return "HandshakeResponseMessage(ledCount=$ledCount)"
+    }
 }

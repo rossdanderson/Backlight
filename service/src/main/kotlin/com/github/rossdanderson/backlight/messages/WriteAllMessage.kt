@@ -23,4 +23,11 @@ inline class WriteAllMessage(
             return WriteAllMessage(uByteArray)
         }
     }
+
+    val colors: List<UColor>
+        get() = backingArray.drop(1).windowed(3, 3) { UColor(it[0], it[1], it[2]) }
+
+    override fun toString(): String {
+        return "WriteAllMessage(colors='$colors')"
+    }
 }
