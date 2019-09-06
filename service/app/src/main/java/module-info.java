@@ -1,5 +1,4 @@
 module backlight.app {
-    requires backlight.jni;
     requires com.fazecast.jSerialComm;
     requires kotlin.stdlib;
     requires kotlin.stdlib.jdk8;

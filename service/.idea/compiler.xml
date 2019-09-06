@@ -14,6 +14,8 @@
       <module name="Backlight.test" target="12" />
       <module name="com.github.rossdanderson.Backlight.app.main" target="12" />
       <module name="com.github.rossdanderson.Backlight.app.test" target="12" />
+      <module name="com.github.rossdanderson.backlight.Backlight.app.main" target="12" />
+      <module name="com.github.rossdanderson.backlight.Backlight.app.test" target="12" />
       <module name="com.github.rossdanderson.backlight.Backlight.jni.main" target="12" />
       <module name="com.github.rossdanderson.backlight.Backlight.jni.test" target="12" />
       <module name="com.github.rossdanderson.Backlight.jni.main" target="12" />

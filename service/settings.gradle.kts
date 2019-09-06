@@ -8,7 +8,7 @@ pluginManagement {
     }
 }
 
-include("app", "jni")
+include("app")
 
 rootProject.name = "Backlight"
 
