@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     val kotlinVersion = "1.3.50"
 
+    idea
     java
     application
     kotlin("jvm") version kotlinVersion
@@ -12,14 +13,13 @@ plugins {
     id("org.openjfx.javafxplugin") version "0.0.7"
 }
 
+group = "com.github.rossdanderson.backlight"
+version = "1.0-SNAPSHOT"
+
 val moduleName: String by project
 
 application {
     mainClassName = "$moduleName/com.github.rossdanderson.backlight.BacklightApplicationKt"
-}
-
-application {
-    mainClassName = "com.github.rossdanderson.backlight.BacklightApplicationKt"
 }
 
 java {
@@ -50,7 +50,6 @@ val javaFXVersion = "12.0.1"
 val koinVersion = "2.0.1"
 
 dependencies {
-    implementation(project(":jni"))
     implementation(kotlin("stdlib-jdk8"))
     implementation(kotlin("reflect"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
@@ -63,6 +62,18 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:1.7.26")
 
     testImplementation("org.koin:koin-test:$koinVersion")
+}
+
+sourceSets {
+    val main by getting
+    main.java.srcDirs("$projectDir/src/generated/java")
+    main.resources.srcDirs("$projectDir/src/generated/resources")
+}
+
+idea {
+    module {
+        generatedSourceDirs = setOf(file("$projectDir/src/generated/java"))
+    }
 }
 
 val compileKotlin: KotlinCompile by tasks

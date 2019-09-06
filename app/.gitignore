@@ -53,13 +53,10 @@ drag_handle
 .gradle
 
 # Build directories
-app/build/
-app/out/
-app/config/
-
-jni/build/
-jni/out/
-jni/config/
+build/
+out/
+src/generated/
+native-libs/
 
 # Ignore Gradle GUI config
 gradle-app.setting

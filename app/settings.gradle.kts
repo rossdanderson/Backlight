@@ -8,7 +8,4 @@ pluginManagement {
     }
 }
 
-include("app")
-
-rootProject.name = "Backlight"
-
+rootProject.name = "app"

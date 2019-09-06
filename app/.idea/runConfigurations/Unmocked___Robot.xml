@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Mocked" type="JetRunConfigurationType" factoryName="Kotlin">
-    <module name="Backlight.app.main" />
+  <configuration default="false" name="Unmocked - Robot" type="JetRunConfigurationType" factoryName="Kotlin">
+    <module name="app.main" />
     <option name="VM_PARAMETERS" value="-ea" />
     <option name="PROGRAM_PARAMETERS" value="" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
@@ -9,7 +9,7 @@
     <option name="MAIN_CLASS_NAME" value="com.github.rossdanderson.backlight.app.BacklightApplicationKt" />
     <option name="WORKING_DIRECTORY" value="" />
     <envs>
-      <env name="mock-serial-connection" value="true" />
+      <env name="legacy-screen-capture" value="true" />
     </envs>
     <method v="2">
       <option name="Make" enabled="true" />

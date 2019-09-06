@@ -5,7 +5,7 @@ find_package(Java COMPONENTS Development REQUIRED)
 find_package(JNI REQUIRED)
 
 set(CMAKE_SWIG_FLAGS "")
-set(PACKAGE_NAME com.github.rossdanderson.backlight.jni)
+set(PACKAGE_NAME com.github.rossdanderson.backlight.app.generated.screen.dxgi)
 list(APPEND CMAKE_SWIG_FLAGS "-package;${PACKAGE_NAME}")
 
 set_property(SOURCE src/main/swig/Capture.i PROPERTY CPLUSPLUS ON)
@@ -20,3 +20,9 @@ swig_add_library(${CAPTURE_NAME}
 set_target_properties(${SWIG_MODULE_${CAPTURE_NAME}_REAL_NAME} PROPERTIES SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE)
 target_link_libraries(${SWIG_MODULE_${CAPTURE_NAME}_REAL_NAME} dxgi-capture-lib)
 target_include_directories(${SWIG_MODULE_${CAPTURE_NAME}_REAL_NAME} PRIVATE ${JNI_INCLUDE_DIRS})
+
+install(TARGETS dxgi-capture-java
+        DESTINATION app/src/generated/resources)
+install(DIRECTORY ${CMAKE_BINARY_DIR}/java/
+        DESTINATION app/src/generated/java/com/github/rossdanderson/backlight/app/generated/screen/dxgi
+        FILES_MATCHING PATTERN "*.java")

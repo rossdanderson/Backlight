@@ -5,7 +5,7 @@ package com.github.rossdanderson.backlight.app
 import com.github.rossdanderson.backlight.app.config.ConfigService
 import com.github.rossdanderson.backlight.app.daemon.DaemonJobManager
 import com.github.rossdanderson.backlight.app.led.LEDService
-import com.github.rossdanderson.backlight.app.screen.IScreenService
+import com.github.rossdanderson.backlight.app.screen.dxgi.DXGIScreenService
 import com.github.rossdanderson.backlight.app.screen.robot.RobotScreenService
 import com.github.rossdanderson.backlight.app.serial.jserialcomm.JSerialCommService
 import com.github.rossdanderson.backlight.app.serial.mock.MockSerialService
@@ -55,7 +55,10 @@ fun main() {
                         ConfigService(get())
                             .apply { runBlocking { initialise() } }
                     }
-                    single<IScreenService> { RobotScreenService(get()) }
+                    single {
+                        if (getPropertyOrNull<String>("legacy-screen-capture")?.toBoolean() == true) RobotScreenService(get())
+                        else DXGIScreenService()
+                    }
                     single { LEDService(get(), get(), get()) }
                     single {
                         if (getPropertyOrNull<String>("mock-serial-connection")?.toBoolean() == true) MockSerialService()
