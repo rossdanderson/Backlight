@@ -1,18 +1,28 @@
-%module DXGICapture
-
-%include "std_string.i"
+%module(directors="1") DXGICapture
 
 %{
 #include <sstream>
+#include <string>
+#include "logger.h"
 #include "capture.h"
 %}
+
+%include "std_string.i"
+%include "std_shared_ptr.i"
+
+%shared_ptr(logger);
+%feature("director") logger;
+
+%ignore operator<<;
 
 %rename (Capture) capture;
 %rename (Point) point;
 %rename (Rectangle) rectangle;
+%rename (Logger) logger;
+
+%include "logger.h"
 
 %include "capture.h"
-%ignore operator<<;
 
 %extend rectangle {
     std::string toString() const {
@@ -29,3 +39,5 @@
         return stream.str();
     }
 };
+
+

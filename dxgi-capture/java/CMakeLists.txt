@@ -8,14 +8,17 @@ set(CMAKE_SWIG_FLAGS "")
 set(PACKAGE_NAME com.github.rossdanderson.backlight.app.generated.screen.dxgi)
 list(APPEND CMAKE_SWIG_FLAGS "-package;${PACKAGE_NAME}")
 
-set_property(SOURCE src/main/swig/Capture.i PROPERTY CPLUSPLUS ON)
+set_property(SOURCE
+        src/main/swig/Capture.i
+        PROPERTY CPLUSPLUS ON)
 
 set(CAPTURE_NAME dxgi-capture-java)
 
 swig_add_library(${CAPTURE_NAME}
         TYPE SHARED
         LANGUAGE java
-        SOURCES src/main/swig/Capture.i)
+        SOURCES
+        src/main/swig/Capture.i)
 
 set_target_properties(${SWIG_MODULE_${CAPTURE_NAME}_REAL_NAME} PROPERTIES SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE)
 target_link_libraries(${SWIG_MODULE_${CAPTURE_NAME}_REAL_NAME} dxgi-capture-lib)

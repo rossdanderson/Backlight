@@ -1,10 +1,12 @@
 #ifndef DXGICAPTURE_CAPTURE_H
 #define DXGICAPTURE_CAPTURE_H
 
+#include <memory>
 #include <ostream>
 #include <dxgi1_2.h>
 #include <atlbase.h>
 #include <d3d11.h>
+#include "logger.h"
 
 struct point {
     long x;
@@ -37,13 +39,14 @@ inline std::ostream &operator<<(std::ostream &stream, const rectangle &rectangle
 
 class capture {
 public:
-    capture();
+    capture(std::shared_ptr<logger> logger);
 
     void init();
 
     rectangle getDimensions();
 
 private:
+    std::shared_ptr<logger> logger;
     RECT dimensions = RECT();
     CComPtr<IDXGIAdapter1> adapter1 = nullptr;
     CComQIPtr<IDXGIOutput1> output1 = nullptr;

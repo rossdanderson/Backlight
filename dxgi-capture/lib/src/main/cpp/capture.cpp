@@ -1,10 +1,12 @@
 #include "../public/capture.h"
 #include "../include/captureUtils.h"
-#include <iostream>
+#include <sstream>
 
 using namespace std;
 
-capture::capture() = default;
+capture::capture(std::shared_ptr<class logger> logger) {
+    this->logger = std::move(logger);
+};
 
 void capture::init() {
     MONITORINFO monitorInfo;
@@ -51,7 +53,8 @@ void capture::init() {
     DXGI_OUTPUT_DESC outputDesc;
     output->GetDesc(&outputDesc);
 
-    wcout << "Adapter output found:"
+    ostringstream infoStream;
+    infoStream << "Adapter output found:"
           << " Description='" << adapterDesc.Description
           << "', DeviceId='" << adapterDesc.DeviceId
           << "', DeviceName='" << outputDesc.DeviceName
@@ -60,8 +63,8 @@ void capture::init() {
           << "," << outputDesc.DesktopCoordinates.top
           << "),(" << outputDesc.DesktopCoordinates.right
           << "," << outputDesc.DesktopCoordinates.bottom
-          << ")'"
-          << endl;
+          << ")'";
+    logger->info(infoStream.str());
 
     CComPtr<ID3D11Device> device;
     CComPtr<ID3D11DeviceContext> deviceContext;
