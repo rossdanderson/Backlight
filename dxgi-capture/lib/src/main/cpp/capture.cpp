@@ -112,6 +112,6 @@ void capture::init() {
 rectangle capture::getDimensions() {
     return rectangle(
             point(dimensions.top, dimensions.left),
-            point(dimensions.top, dimensions.left)
+            point(dimensions.bottom, dimensions.right)
     );
 }

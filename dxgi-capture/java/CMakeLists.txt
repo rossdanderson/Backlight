@@ -22,7 +22,7 @@ target_link_libraries(${SWIG_MODULE_${CAPTURE_NAME}_REAL_NAME} dxgi-capture-lib)
 target_include_directories(${SWIG_MODULE_${CAPTURE_NAME}_REAL_NAME} PRIVATE ${JNI_INCLUDE_DIRS})
 
 install(TARGETS dxgi-capture-java
-        DESTINATION app/src/generated/resources)
+        DESTINATION app/native-libs)
 install(DIRECTORY ${CMAKE_BINARY_DIR}/java/
         DESTINATION app/src/generated/java/com/github/rossdanderson/backlight/app/generated/screen/dxgi
         FILES_MATCHING PATTERN "*.java")

@@ -14,6 +14,6 @@ inline class HandshakeResponseMessage(
         get() = backingArray[numLedsOffset].toInt()
 
     override fun toString(): String {
-        return "HandshakeResponseMessage(ledCount=$ledCount)"
+        return "HandshakeResponseMessage(ledCount='$ledCount')"
     }
 }

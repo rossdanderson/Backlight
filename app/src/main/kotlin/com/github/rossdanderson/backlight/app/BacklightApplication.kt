@@ -52,10 +52,6 @@ fun main() {
                 module {
                     single { Json(JsonConfiguration.Default.copy(prettyPrint = true)) }
                     single {
-                        ConfigService(get())
-                            .apply { runBlocking { initialise() } }
-                    }
-                    single {
                         if (getPropertyOrNull<String>("legacy-screen-capture")?.toBoolean() == true) RobotScreenService(get())
                         else DXGIScreenService()
                     }
@@ -65,10 +61,8 @@ fun main() {
                         else JSerialCommService(scope)
                     }
 
-                    single(createdAtStart = true) {
-                        DaemonJobManager(get(), get(), get(), GlobalScope)
-                            .apply { initialise() }
-                    }
+                    single(createdAtStart = true) { ConfigService(get()) }
+                    single(createdAtStart = true) { DaemonJobManager(get(), get(), get(), GlobalScope) }
                 }
             )
         }

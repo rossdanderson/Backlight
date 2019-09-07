@@ -20,7 +20,7 @@ class DaemonJobManager(
     daemonScope: CoroutineScope
 ) : CoroutineScope by daemonScope {
 
-    fun initialise() {
+    init {
         // Bind the led flow to serial out
         launch {
             serialService.connectionStateFlow
