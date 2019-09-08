@@ -39,7 +39,7 @@ inline std::ostream &operator<<(std::ostream &stream, const rectangle &rectangle
 
 class capture {
 public:
-    capture(std::shared_ptr<logger> logger);
+    explicit capture(std::shared_ptr<logger> logger);
 
     void init();
 

@@ -6,7 +6,7 @@ using namespace std;
 
 capture::capture(std::shared_ptr<class logger> logger) {
     this->logger = std::move(logger);
-};
+}
 
 void capture::init() {
     MONITORINFO monitorInfo;
