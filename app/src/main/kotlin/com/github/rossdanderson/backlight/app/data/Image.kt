@@ -17,6 +17,14 @@ data class Image(
 
     operator fun get(x: Int, y: Int): Color = Color(pixels[y * width + x])
 
+    operator fun set(x: Int, y: Int, color: Color) {
+        pixels[y * width + x] = color.rgb
+    }
+
+    fun map(action: (Color) -> Color) {
+        (0 until pixels.size).forEach { pixels[it] = action(Color(pixels[it])).rgb }
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

@@ -5,28 +5,37 @@ package com.github.rossdanderson.backlight.app.ui
 import com.github.rossdanderson.backlight.app.ui.base.BaseView
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import tornadofx.label
-import tornadofx.onChange
-import tornadofx.slider
-import tornadofx.vbox
+import tornadofx.*
+import kotlin.time.ExperimentalTime
 
+@ExperimentalTime
 class ControlView : BaseView() {
 
     private val controlViewModel by inject<ControlViewModel>()
 
     override val root = vbox {
         val saturationLabel = label("Saturation:")
-        val saturationSlider = slider(0, 255) {
-            launch { controlViewModel.saturationFlow.collect { value = it } }
-            valueProperty().onChange { launch { controlViewModel.updateSaturation(it) } }
+        hbox {
+            val saturationSlider = slider(0.0, 10.0) {
+                launch { controlViewModel.saturationFlow.collect { value = it } }
+                valueProperty().onChange { launch { controlViewModel.updateSaturation(it) } }
+            }
+            button("Reset") {
+                setOnMouseClicked { launch { controlViewModel.updateSaturation(1.0) } }
+            }
+            saturationLabel.labelFor = saturationSlider
         }
-        saturationLabel.labelFor = saturationSlider
 
         val contrastLabel = label("Contrast:")
-        val contrastSlider = slider(0, 255) {
-            launch { controlViewModel.contrastFlow.collect { value = it } }
-            valueProperty().onChange { launch { controlViewModel.updateContrast(it) } }
+        hbox {
+            val contrastSlider = slider(0.0, 10.0) {
+                launch { controlViewModel.contrastFlow.collect { value = it } }
+                valueProperty().onChange { launch { controlViewModel.updateContrast(it) } }
+            }
+            button("Reset") {
+                setOnMouseClicked { launch { controlViewModel.updateContrast(1.0) } }
+            }
+            contrastLabel.labelFor = contrastSlider
         }
-        contrastLabel.labelFor = contrastSlider
     }
 }

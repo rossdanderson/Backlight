@@ -19,10 +19,10 @@ class MessageListener(
         "\n".toByteArray(Charset.forName("ASCII"))
 
     override fun serialEvent(event: SerialPortEvent) {
-        val uByteArray = event.receivedData.toUByteArray()
-        println(uByteArray.contentToString())
-        println(uByteArray.cobsDecode().contentToString())
-        sendChannel.offer(Message.from(uByteArray.cobsDecode()))
+        val byteArray = event.receivedData
+        println(byteArray!!.contentToString())
+        println(byteArray.cobsDecode().contentToString())
+        sendChannel.offer(Message.from(byteArray.cobsDecode().toUByteArray()))
     }
 
     override fun getListeningEvents(): Int = LISTENING_EVENT_DATA_RECEIVED

@@ -1,5 +1,8 @@
+@file:Suppress("EXPERIMENTAL_API_USAGE")
+
 package com.github.rossdanderson.backlight.app.serial.mock
 
+import com.github.rossdanderson.backlight.app.delay
 import com.github.rossdanderson.backlight.app.messages.Message
 import com.github.rossdanderson.backlight.app.serial.ConnectResult
 import com.github.rossdanderson.backlight.app.serial.ConnectResult.Failure
@@ -7,15 +10,17 @@ import com.github.rossdanderson.backlight.app.serial.ConnectResult.Success
 import com.github.rossdanderson.backlight.app.serial.ConnectionState
 import com.github.rossdanderson.backlight.app.serial.ConnectionState.Disconnected
 import com.github.rossdanderson.backlight.app.serial.ISerialService
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.withContext
 import mu.KotlinLogging
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.random.Random
+import kotlin.time.ExperimentalTime
+import kotlin.time.milliseconds
 
-@ExperimentalCoroutinesApi
-@FlowPreview
+@ExperimentalTime
 class MockSerialService : ISerialService {
 
     private val logger = KotlinLogging.logger {}
@@ -33,13 +38,13 @@ class MockSerialService : ISerialService {
         flow {
             while (true) {
                 emit((1..Random.nextInt(3, 8)).step(Random.nextInt(1, 3)).map { id -> "Port - $id" })
-                delay(5000)
+                delay(5000.milliseconds)
             }
         }
             .flowOn(Dispatchers.Default)
 
     override suspend fun connect(portDescriptor: String): ConnectResult = withContext(Dispatchers.IO) {
-        delay(1000)
+        delay(1000.milliseconds)
         val result = when (portDescriptor) {
             "Port - 1" -> {
                 logger.warn { "Cannot connect to $portDescriptor - magic port" }
@@ -68,7 +73,7 @@ class MockSerialService : ISerialService {
                 logger.info { "Disconnected from $previousConnection" }
             }
         }
-        delay(100)
+        delay(100.milliseconds)
     }
 
     override suspend fun send(message: Message) = withContext(Dispatchers.IO) {

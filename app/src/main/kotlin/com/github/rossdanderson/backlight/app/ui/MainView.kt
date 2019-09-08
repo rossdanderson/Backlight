@@ -15,9 +15,11 @@ import javafx.scene.paint.Stop
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import tornadofx.*
+import kotlin.time.ExperimentalTime
 
 const val colorFormatMultiplier = 1.0 / 255.0
 
+@ExperimentalTime
 class MainView : BaseView() {
 
     private val vm by inject<MainViewModel>()
@@ -30,7 +32,7 @@ class MainView : BaseView() {
                 vbox {
                     vbox {
                         background = Background(BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY))
-                        this.maxWidth = 512.0
+                        maxWidth = 512.0
                         imageview {
                             launch { vm.imageFlow.collect { image = it } }
                             isPreserveRatio = true
@@ -47,24 +49,25 @@ class MainView : BaseView() {
                         launch {
                             vm.ledColorsFlow.collect { colors ->
                                 val step = 1.0 / (colors.size - 1)
+                                val stops = colors.mapIndexed { index, color ->
+                                    Stop(
+                                        step * index,
+                                        Color(
+                                            color.red.toDouble() * colorFormatMultiplier,
+                                            color.green.toDouble() * colorFormatMultiplier,
+                                            color.blue.toDouble() * colorFormatMultiplier,
+                                            1.0
+                                        )
+                                    )
+                                }
                                 fill = LinearGradient(
                                     0.0,
                                     0.0,
-                                    800.0,
+                                    this@rectangle.width,
                                     0.0,
                                     false,
                                     CycleMethod.NO_CYCLE,
-                                    colors.mapIndexed { index, color ->
-                                        Stop(
-                                            step * index,
-                                            Color(
-                                                color.red.toDouble() * colorFormatMultiplier,
-                                                color.green.toDouble() * colorFormatMultiplier,
-                                                color.blue.toDouble() * colorFormatMultiplier,
-                                                1.0
-                                            )
-                                        )
-                                    }
+                                    stops
                                 )
                             }
                         }
@@ -82,8 +85,6 @@ class MainView : BaseView() {
     }
 
     override fun onDock() {
-        launch {
-            vm.showPortSelectEventFlow.collect { find<PortSelectFragment>().openModal() }
-        }
+        launch { vm.showPortSelectEventFlow.collect { find<PortSelectFragment>().openModal() } }
     }
 }

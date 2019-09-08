@@ -12,8 +12,11 @@ import com.github.rossdanderson.backlight.app.greyscaleLuminosity
 import com.github.rossdanderson.backlight.app.screen.IScreenService
 import com.github.rossdanderson.backlight.app.serial.ConnectionState
 import com.github.rossdanderson.backlight.app.serial.ISerialService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import kotlin.time.ExperimentalTime
 
+@ExperimentalTime
 class LEDService(
     private val screenService: IScreenService,
     configService: ConfigService,
@@ -31,63 +34,66 @@ class LEDService(
     private val saturationAlphaFlow = configService.configFlow.map { it.saturationAlpha }.distinctUntilChanged()
 
     val ledColorsFlow: Flow<List<UColor>> = ledCountFlow
-        .switchMap { ledCount ->
+        .flatMapLatest { ledCount ->
             var prevImageWidth: Int? = null
             var prevImageHeight: Int? = null
             var screenSections: List<IntRange2D>? = null
 
-            screenService.screenFlow
-                .map { Image(it) }
-                .combineLatest(contrastFactorFlow, saturationAlphaFlow) { image, contrastFactor, saturationAlpha ->
-                    // If the image dimensions or the number of LEDs changes, remap the screen sections to sample from
-                    if (screenSections == null || prevImageHeight != image.height || prevImageWidth != image.width) {
-                        prevImageWidth = image.width
-                        prevImageHeight = image.height
+            combine(
+                screenService.screenFlow.map { Image(it) },
+                contrastFactorFlow,
+                saturationAlphaFlow
+            ) { image, contrastFactor, saturationAlpha ->
+                // If the image dimensions or the number of LEDs changes, remap the screen sections to sample from
+                if (screenSections == null || prevImageHeight != image.height || prevImageWidth != image.width) {
+                    prevImageWidth = image.width
+                    prevImageHeight = image.height
 
-                        val sampleHeight = 256
-                        val sampleWidth = (image.width.toDouble() / ledCount.toDouble()).toInt()
+                    val sampleHeight = 256
+                    val sampleWidth = (image.width.toDouble() / ledCount.toDouble()).toInt()
 
-                        screenSections = (0 until ledCount).map {
-                            IntRange2D(
-                                xRange = offsetIntRange(it * sampleWidth, sampleWidth),
-                                yRange = offsetIntRange(image.height - sampleHeight, sampleHeight)
-                            )
-                        }
+                    screenSections = (0 until ledCount).map {
+                        IntRange2D(
+                            xRange = offsetIntRange(it * sampleWidth, sampleWidth),
+                            yRange = offsetIntRange(image.height - sampleHeight, sampleHeight)
+                        )
                     }
-
-                    screenSections!!
-                        .map { intRange2D ->
-                            var red = 0
-                            var green = 0
-                            var blue = 0
-                            var count = 0
-
-                            intRange2D.forEach { x, y ->
-                                val rgb = image[x, y]
-                                val greyscaleLuminosity = rgb.greyscaleLuminosity()
-                                red += rgb.red
-                                    .applySaturation(saturationAlpha, greyscaleLuminosity)
-                                    .applyContrast(contrastFactor)
-                                green += rgb.green
-                                    .applySaturation(saturationAlpha, greyscaleLuminosity)
-                                    .applyContrast(contrastFactor)
-                                blue += rgb.blue
-                                    .applySaturation(saturationAlpha, greyscaleLuminosity)
-                                    .applyContrast(contrastFactor)
-                                count++
-                            }
-
-                            val redAvg = (red / count).toUByte()
-                            val greenAvg = (green / count).toUByte()
-                            val blueAvg = (blue / count).toUByte()
-
-                            UColor(redAvg, greenAvg, blueAvg)
-                        }
-                        .toList()
                 }
+
+                screenSections!!
+                    .map { intRange2D ->
+                        var red = 0
+                        var green = 0
+                        var blue = 0
+                        var count = 0
+
+                        intRange2D.forEach { x, y ->
+                            val rgb = image[x, y]
+                            val greyscaleLuminosity = rgb.greyscaleLuminosity()
+                            red += rgb.red
+                                .applySaturation(saturationAlpha, greyscaleLuminosity)
+                                .applyContrast(contrastFactor)
+                            green += rgb.green
+                                .applySaturation(saturationAlpha, greyscaleLuminosity)
+                                .applyContrast(contrastFactor)
+                            blue += rgb.blue
+                                .applySaturation(saturationAlpha, greyscaleLuminosity)
+                                .applyContrast(contrastFactor)
+                            count++
+                        }
+
+                        val redAvg = (red / count).toUByte()
+                        val greenAvg = (green / count).toUByte()
+                        val blueAvg = (blue / count).toUByte()
+
+                        UColor(redAvg, greenAvg, blueAvg)
+                    }
+                    .toList()
+            }
         }
         .distinctUntilChanged()
         .conflate()
+        .flowOn(Dispatchers.Default)
 
     private fun offsetIntRange(start: Int, length: Int): IntRange = start until (start + length)
 }

@@ -17,7 +17,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import mu.KotlinLogging
 import java.nio.file.Paths
+import kotlin.time.ExperimentalTime
 
+@ExperimentalTime
 class ConfigService(
     private val json: Json
 ) {

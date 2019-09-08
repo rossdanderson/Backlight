@@ -1,18 +1,17 @@
-@file:Suppress("EXPERIMENTAL_UNSIGNED_LITERALS", "EXPERIMENTAL_API_USAGE")
+@file:Suppress("EXPERIMENTAL_API_USAGE")
 
 package com.github.rossdanderson.backlight.app
 
 import com.github.rossdanderson.backlight.app.config.ConfigService
 import com.github.rossdanderson.backlight.app.daemon.DaemonJobManager
 import com.github.rossdanderson.backlight.app.led.LEDService
-import com.github.rossdanderson.backlight.app.screen.dxgi.DXGIScreenService
-import com.github.rossdanderson.backlight.app.screen.robot.RobotScreenService
+import com.github.rossdanderson.backlight.app.screen.filter.FilterScreenService
+import com.github.rossdanderson.backlight.app.screen.source.dxgi.DXGIScreenService
+import com.github.rossdanderson.backlight.app.screen.source.robot.RobotScreenService
 import com.github.rossdanderson.backlight.app.serial.jserialcomm.JSerialCommService
 import com.github.rossdanderson.backlight.app.serial.mock.MockSerialService
 import com.github.rossdanderson.backlight.app.ui.BacklightApp
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
 import mu.KotlinLogging
@@ -25,6 +24,7 @@ import tornadofx.DIContainer
 import tornadofx.FX
 import tornadofx.launch
 import kotlin.reflect.KClass
+import kotlin.time.ExperimentalTime
 
 private val logger = KotlinLogging.logger { }
 
@@ -38,42 +38,39 @@ object KoinKotlinLogger : Logger() {
     }
 }
 
+@ExperimentalTime
 fun main() {
-    runBlocking(Dispatchers.Default) {
-        val scope = this@runBlocking
+    val koinApplication = startKoin {
+        logger(KoinKotlinLogger)
 
-        val koinApplication = startKoin {
+        environmentProperties()
 
-            logger(KoinKotlinLogger)
-
-            environmentProperties()
-
-            modules(
-                module {
-                    single { Json(JsonConfiguration.Default.copy(prettyPrint = true)) }
-                    single {
-                        if (getPropertyOrNull<String>("legacy-screen-capture")?.toBoolean() == true) RobotScreenService(get())
-                        else DXGIScreenService()
-                    }
-                    single { LEDService(get(), get(), get()) }
-                    single {
-                        if (getPropertyOrNull<String>("mock-serial-connection")?.toBoolean() == true) MockSerialService()
-                        else JSerialCommService(scope)
-                    }
-
-                    single(createdAtStart = true) { ConfigService(get()) }
-                    single(createdAtStart = true) { DaemonJobManager(get(), get(), get(), GlobalScope) }
+        modules(
+            module {
+                single { Json(JsonConfiguration.Default.copy(prettyPrint = true)) }
+                single {
+                    if (getPropertyOrNull<String>("legacy-screen-capture")?.toBoolean() == true) RobotScreenService(
+                        get()
+                    )
+                    else DXGIScreenService()
                 }
-            )
-        }
+                single { FilterScreenService(get(), get()) }
+                single { LEDService(get(), get(), get()) }
+                single {
+                    if (getPropertyOrNull<String>("mock-serial-connection")?.toBoolean() == true) MockSerialService()
+                    else JSerialCommService(GlobalScope)
+                }
 
-        val koin = koinApplication.koin
-
-        FX.dicontainer = object : DIContainer {
-            override fun <T : Any> getInstance(type: KClass<T>): T = koin.get(type, null, null)
-        }
-
-        // This blocks for the duration
-        launch<BacklightApp>()
+                single(createdAtStart = true) { ConfigService(get()) }
+                single(createdAtStart = true) { DaemonJobManager(get(), get(), get(), GlobalScope) }
+            }
+        )
     }
+
+    val koin = koinApplication.koin
+    FX.dicontainer = object : DIContainer {
+        override fun <T : Any> getInstance(type: KClass<T>): T = koin.get(type, null, null)
+    }
+
+    launch<BacklightApp>()
 }

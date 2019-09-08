@@ -1,12 +1,17 @@
-@file:Suppress("EXPERIMENTAL_API_USAGE", "EXPERIMENTAL_UNSIGNED_LITERALS")
+@file:Suppress("EXPERIMENTAL_API_USAGE")
 
 package com.github.rossdanderson.backlight.app
 
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
+import javafx.beans.value.ChangeListener
+import javafx.beans.value.ObservableValue
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.switchMap
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import java.awt.Color
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
 
 fun Int.applySaturation(alpha: Double, greyscaleLuminosity: Double): Int =
     maxOf(0, minOf(255, (alpha * this + (1.0 - alpha) * greyscaleLuminosity).toInt()))
@@ -16,64 +21,89 @@ fun Int.applyContrast(contrastFactor: Double): Int =
 
 fun Color.greyscaleLuminosity() = red * 0.299 + green * 0.587 + blue * 0.114
 
-fun <U : Any> Flow<Flow<U>>.flattenSwitch(): Flow<U> = switchMap { it }
+fun <U : Any> Flow<Flow<U>>.flatMapLatest(): Flow<U> = flatMapLatest { it }
 
-fun Collection<Job>.cancelAll(cause: CancellationException? = null): Unit = forEach { it.cancel(cause) }
+fun <T> ObservableValue<T>.toFlow(): Flow<T> = callbackFlow {
+    val listener = ChangeListener<T> { _, _, newValue -> offer(newValue) }
+    addListener(listener)
+    awaitClose {
+        removeListener(listener)
+    }
+}
 
-fun UByteArray.cobsEncode(): UByteArray {
+@ExperimentalTime
+suspend fun delay(duration: Duration) {
+    delay(duration.toLongMilliseconds())
+}
+
+fun ByteArray.cobsEncode(
+    size: Int = this.size
+): ByteArray {
     var readIndex = 0
     var writeIndex = 1
     var codeIndex = 0
-    var code: UByte = 1u
+    var code = 1
 
-    val encodedBufferSize = size + size / 254 + 1
-    val encodedBuffer = UByteArray(encodedBufferSize)
+    val encodedBuffer = ByteArray(getEncodedBufferSize(size))
 
     while (readIndex < size) {
-        when {
-            get(readIndex) == 0.toUByte() -> {
-                encodedBuffer[codeIndex] = code
-                code = 1u
-                codeIndex = writeIndex++
-                readIndex++
-            }
-            else -> {
-                encodedBuffer[writeIndex++] = get(readIndex++)
-                code++
+        if ((this[readIndex].toInt() and 0xFF) == 0) {
+            encodedBuffer[codeIndex] = code.toByte()
+            code = 1
+            codeIndex = writeIndex++
+            readIndex++
+        } else {
+            encodedBuffer[writeIndex++] = this[readIndex++]
+            code++
 
-                if (code == 0xFFu.toUByte()) {
-                    encodedBuffer[codeIndex] = code
-                    code = 1u
-                    codeIndex = writeIndex++
-                }
+            if (code == 0xFF) {
+                encodedBuffer[codeIndex] = code.toByte()
+                code = 1
+                codeIndex = writeIndex++
             }
         }
     }
 
-    encodedBuffer[codeIndex] = code
+    encodedBuffer[codeIndex] = code.toByte()
 
-    return encodedBuffer
+    return encodedBuffer.take(writeIndex).toByteArray()
 }
 
-fun UByteArray.cobsDecode(): UByteArray {
-    if (this.isEmpty() || this[this.size - 1].toInt() != 0) return ubyteArrayOf()
+fun ByteArray.cobsDecode(
+    size: Int = this.size
+): ByteArray {
+    if (size == 0)
+        return ByteArray(0)
 
-    val output = UByteArray(size - 2)
-    val srcPacketLength = size - 1
-    var srcIndex = 0
-    var destIndex = 0
+    var readIndex = 0
+    var writeIndex = 0
 
-    while (srcIndex < srcPacketLength) {
-        val code: UByte = get(srcIndex++) and 0xffu
-        var i: UByte = 1u
-        while (srcIndex < srcPacketLength && i < code) {
-            output[destIndex++] = get(srcIndex++)
-            ++i
+    val decodedBuffer = ByteArray(this.size)
+    var code: Int
+    var i: Int
+    while (readIndex < size) {
+        code = this[readIndex].toInt() and 0xFF
+
+        if (readIndex + code > size && code != 1) {
+            return ByteArray(0)
         }
-        if (code != 255u.toUByte() && srcIndex != srcPacketLength) {
-            output[destIndex++] = 0u
+
+        readIndex++
+
+        i = 1
+        while (i < code) {
+            decodedBuffer[writeIndex++] = this[readIndex++]
+            i++
+        }
+
+        if (code != 0xFF && readIndex != size) {
+            decodedBuffer[writeIndex++] = 0
         }
     }
 
-    return output
+    return decodedBuffer.take(writeIndex).toByteArray()
+}
+
+fun getEncodedBufferSize(unencodedBufferSize: Int): Int {
+    return unencodedBufferSize + unencodedBufferSize / 254 + 1
 }

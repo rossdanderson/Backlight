@@ -2,8 +2,21 @@
 
 package com.github.rossdanderson.backlight.app.ui
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.MainScope
+import javafx.application.Platform
+import javafx.stage.Stage
 import tornadofx.App
+import kotlin.system.exitProcess
+import kotlin.time.ExperimentalTime
 
-class BacklightApp : App(MainView::class), CoroutineScope by MainScope()
+@ExperimentalTime
+class BacklightApp : App(MainView::class) {
+
+    override fun start(stage: Stage) {
+        super.start(stage)
+    }
+
+    override fun stop() {
+        Platform.exit();
+        exitProcess(0);
+    }
+}

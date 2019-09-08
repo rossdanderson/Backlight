@@ -1,3 +1,5 @@
+@file:Suppress("EXPERIMENTAL_API_USAGE")
+
 package com.github.rossdanderson.backlight.app.ui
 
 import com.github.rossdanderson.backlight.app.config.Config.Companion.defaultPortLens
@@ -6,13 +8,11 @@ import com.github.rossdanderson.backlight.app.serial.ConnectResult
 import com.github.rossdanderson.backlight.app.serial.ISerialService
 import com.github.rossdanderson.backlight.app.ui.base.BaseViewModel
 import com.github.rossdanderson.backlight.app.ui.command.command
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.flow.asFlow
+import kotlin.time.ExperimentalTime
 
-@FlowPreview
-@ExperimentalCoroutinesApi
+@ExperimentalTime
 class PortSelectViewModel : BaseViewModel() {
 
     data class ConnectionFailedAlertEvent(val portDescriptor: String, val reason: String)

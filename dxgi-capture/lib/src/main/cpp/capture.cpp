@@ -53,7 +53,7 @@ void capture::init() {
     DXGI_OUTPUT_DESC outputDesc;
     output->GetDesc(&outputDesc);
 
-    ostringstream infoStream;
+    wostringstream infoStream;
     infoStream << "Adapter output found:"
           << " Description='" << adapterDesc.Description
           << "', DeviceId='" << adapterDesc.DeviceId

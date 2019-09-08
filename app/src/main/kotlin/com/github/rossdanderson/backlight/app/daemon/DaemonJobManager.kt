@@ -4,6 +4,7 @@ package com.github.rossdanderson.backlight.app.daemon
 
 import com.github.rossdanderson.backlight.app.config.Config
 import com.github.rossdanderson.backlight.app.config.ConfigService
+import com.github.rossdanderson.backlight.app.data.UColor
 import com.github.rossdanderson.backlight.app.led.LEDService
 import com.github.rossdanderson.backlight.app.messages.WriteAllMessage
 import com.github.rossdanderson.backlight.app.serial.ConnectResult
@@ -12,7 +13,9 @@ import com.github.rossdanderson.backlight.app.serial.ISerialService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlin.time.ExperimentalTime
 
+@ExperimentalTime
 class DaemonJobManager(
     private val ledService: LEDService,
     private val configService: ConfigService,
@@ -24,10 +27,9 @@ class DaemonJobManager(
         // Bind the led flow to serial out
         launch {
             serialService.connectionStateFlow
-                .switchMap {
+                .transformLatest<ConnectionState, List<UColor>> {
                     when (it) {
-                        is ConnectionState.Connected -> ledService.ledColorsFlow
-                        else -> flowOf()
+                        is ConnectionState.Connected -> emitAll(ledService.ledColorsFlow)
                     }
                 }
                 .collect { serialService.send(WriteAllMessage(it)) }

@@ -15,6 +15,7 @@ import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.actor
+import kotlinx.coroutines.channels.receiveOrNull
 import kotlinx.coroutines.flow.*
 import mu.KotlinLogging
 import java.util.concurrent.atomic.AtomicBoolean
@@ -71,7 +72,8 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
                                 async { receiveFlow.filterIsInstance<HandshakeResponseMessage>().first() }
                             attemptSerialPort.writeMessage(HandshakeRequestMessage)
 
-                            val handshakeResponse = withTimeoutOrNull(1000) { deferredHandshakeResponse.await() }
+                            val handshakeResponse = withTimeoutOrNull(1000) { deferredHandshakeResponse.await() } ?: HandshakeResponseMessage(
+                                ubyteArrayOf(Header.HANDSHAKE_RESPONSE.toUByte(), 60u))
 
                             if (handshakeResponse != null) {
                                 logger.info { "Connected to ${message.descriptivePortName}" }
@@ -178,9 +180,9 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
     }
 
     private fun SerialPort.writeMessage(message: Message) {
-        val backingArray = message.backingArray
+        val backingArray = message.backingArray.toByteArray()
         logger.info { "Encoding and writing bytes ${backingArray.contentToString()}" }
-        val encoded = backingArray.cobsEncode().toByteArray()
+        val encoded = backingArray.cobsEncode()
         val bytes = encoded + 0u.toUByte().toByte()
         if (writeBytes(bytes, bytes.size.toLong()) == -1) throw IllegalStateException("Failure to write")
     }

@@ -3,7 +3,9 @@ package com.github.rossdanderson.backlight.app.config
 import com.github.rossdanderson.backlight.app.data.Lens
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlin.time.ExperimentalTime
 
+@ExperimentalTime
 @Serializable
 data class Config(
     val defaultPort: String? = null,

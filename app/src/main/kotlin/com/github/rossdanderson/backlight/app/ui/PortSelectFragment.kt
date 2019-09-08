@@ -3,14 +3,12 @@ package com.github.rossdanderson.backlight.app.ui
 import com.github.rossdanderson.backlight.app.ui.base.BaseFragment
 import javafx.geometry.Pos.CENTER
 import javafx.scene.control.Alert
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import tornadofx.*
+import kotlin.time.ExperimentalTime
 
-@FlowPreview
-@ExperimentalCoroutinesApi
+@ExperimentalTime
 class PortSelectFragment : BaseFragment("Port Select") {
 
     private val vm by inject<PortSelectViewModel>()

@@ -4,14 +4,16 @@ package com.github.rossdanderson.backlight.app.ui
 
 import com.github.rossdanderson.backlight.app.config.ConfigService
 import com.github.rossdanderson.backlight.app.led.LEDService
-import com.github.rossdanderson.backlight.app.screen.IScreenService
+import com.github.rossdanderson.backlight.app.screen.filter.FilterScreenService
 import com.github.rossdanderson.backlight.app.ui.MainViewModel.MainEvent.ShowPortSelectModalEvent
 import com.github.rossdanderson.backlight.app.ui.base.BaseViewModel
 import javafx.embed.swing.SwingFXUtils
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
+import kotlin.time.ExperimentalTime
 
+@ExperimentalTime
 class MainViewModel : BaseViewModel() {
 
     sealed class MainEvent {
@@ -20,7 +22,7 @@ class MainViewModel : BaseViewModel() {
 
     private val configService by di<ConfigService>()
     private val ledService by di<LEDService>()
-    private val screenService by di<IScreenService>()
+    private val filterScreenService by di<FilterScreenService>()
 
     val showPortSelectEventFlow = configService.configFlow
         .map { it.defaultPort }
@@ -30,6 +32,6 @@ class MainViewModel : BaseViewModel() {
 
     val ledColorsFlow = ledService.ledColorsFlow
 
-    val imageFlow = screenService.screenFlow
+    val imageFlow = filterScreenService.screenFlow
         .map { SwingFXUtils.toFXImage(it, null) }
 }

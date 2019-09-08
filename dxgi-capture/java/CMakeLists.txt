@@ -5,7 +5,7 @@ find_package(Java COMPONENTS Development REQUIRED)
 find_package(JNI REQUIRED)
 
 set(CMAKE_SWIG_FLAGS "")
-set(PACKAGE_NAME com.github.rossdanderson.backlight.app.generated.screen.dxgi)
+set(PACKAGE_NAME com.github.rossdanderson.backlight.app.screen.source.dxgi.generated)
 list(APPEND CMAKE_SWIG_FLAGS "-package;${PACKAGE_NAME}")
 
 set_property(SOURCE
@@ -27,5 +27,5 @@ target_include_directories(${SWIG_MODULE_${CAPTURE_NAME}_REAL_NAME} PRIVATE ${JN
 install(TARGETS dxgi-capture-java
         DESTINATION app/native-libs)
 install(DIRECTORY ${CMAKE_BINARY_DIR}/java/
-        DESTINATION app/src/generated/java/com/github/rossdanderson/backlight/app/generated/screen/dxgi
+        DESTINATION app/src/generated/java/com/github/rossdanderson/backlight/app/screen/source/dxgi/generated
         FILES_MATCHING PATTERN "*.java")
