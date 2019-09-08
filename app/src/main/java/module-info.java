@@ -12,5 +12,6 @@ module backlight.app {
     requires javafx.swing;
     requires kotlinx.serialization.runtime;
 
+    exports com.github.rossdanderson.backlight.app;
     exports com.github.rossdanderson.backlight.app.ui;
 }

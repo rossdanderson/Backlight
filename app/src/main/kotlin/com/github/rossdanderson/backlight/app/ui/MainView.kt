@@ -2,6 +2,7 @@
 
 package com.github.rossdanderson.backlight.app.ui
 
+import com.github.rossdanderson.backlight.app.application.ApplicationState
 import com.github.rossdanderson.backlight.app.ui.base.BaseView
 import javafx.geometry.Insets
 import javafx.scene.effect.GaussianBlur
@@ -13,6 +14,8 @@ import javafx.scene.paint.CycleMethod
 import javafx.scene.paint.LinearGradient
 import javafx.scene.paint.Stop
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import tornadofx.*
 import kotlin.time.ExperimentalTime
@@ -23,6 +26,7 @@ const val colorFormatMultiplier = 1.0 / 255.0
 class MainView : BaseView() {
 
     private val vm by inject<MainViewModel>()
+    private val eventBus by di<ApplicationState>()
 
     override val root = borderpane {
         prefWidth = 800.0
@@ -34,7 +38,11 @@ class MainView : BaseView() {
                         background = Background(BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY))
                         maxWidth = 512.0
                         imageview {
-                            launch { vm.imageFlow.collect { image = it } }
+                            launch {
+                                eventBus.minimisedFlow
+                                    .flatMapLatest { minimised -> if (minimised) emptyFlow() else vm.imageFlow }
+                                    .collect { image = it }
+                            }
                             isPreserveRatio = true
                             fitWidth = 512.0
                             effect = GaussianBlur()

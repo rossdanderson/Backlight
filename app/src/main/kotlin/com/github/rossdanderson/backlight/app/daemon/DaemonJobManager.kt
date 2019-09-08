@@ -4,7 +4,6 @@ package com.github.rossdanderson.backlight.app.daemon
 
 import com.github.rossdanderson.backlight.app.config.Config
 import com.github.rossdanderson.backlight.app.config.ConfigService
-import com.github.rossdanderson.backlight.app.data.UColor
 import com.github.rossdanderson.backlight.app.led.LEDService
 import com.github.rossdanderson.backlight.app.messages.WriteAllMessage
 import com.github.rossdanderson.backlight.app.serial.ConnectResult
@@ -27,11 +26,7 @@ class DaemonJobManager(
         // Bind the led flow to serial out
         launch {
             serialService.connectionStateFlow
-                .transformLatest<ConnectionState, List<UColor>> {
-                    when (it) {
-                        is ConnectionState.Connected -> emitAll(ledService.ledColorsFlow)
-                    }
-                }
+                .flatMapLatest { if (it is ConnectionState.Connected) ledService.ledColorsFlow else emptyFlow() }
                 .collect { serialService.send(WriteAllMessage(it)) }
         }
 

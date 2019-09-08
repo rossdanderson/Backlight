@@ -23,7 +23,7 @@ fun Color.greyscaleLuminosity() = red * 0.299 + green * 0.587 + blue * 0.114
 
 fun <U : Any> Flow<Flow<U>>.flatMapLatest(): Flow<U> = flatMapLatest { it }
 
-fun <T> ObservableValue<T>.toFlow(): Flow<T> = callbackFlow {
+fun <T> ObservableValue<T>.asFlow(): Flow<T> = callbackFlow {
     val listener = ChangeListener<T> { _, _, newValue -> offer(newValue) }
     addListener(listener)
     awaitClose {
