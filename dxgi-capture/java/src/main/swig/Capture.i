@@ -14,9 +14,14 @@
 %shared_ptr(logger);
 %feature("director") logger;
 
+%shared_ptr(captured);
+
 %ignore operator<<;
 
+%apply char * { unsigned char * };
+
 %rename (Capture) capture;
+%rename (Captured) captured;
 %rename (Point) point;
 %rename (Rectangle) rectangle;
 %rename (Logger) logger;

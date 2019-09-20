@@ -4,12 +4,16 @@ package com.github.rossdanderson.backlight.app
 
 import javafx.beans.value.ChangeListener
 import javafx.beans.value.ObservableValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.*
+import mu.KotlinLogging
 import java.awt.Color
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
@@ -22,6 +26,32 @@ fun Int.applyContrast(contrastFactor: Double): Int =
 fun Color.greyscaleLuminosity() = red * 0.299 + green * 0.587 + blue * 0.114
 
 fun <U : Any> Flow<Flow<U>>.flatMapLatest(): Flow<U> = flatMapLatest { it }
+
+val logger = KotlinLogging.logger {  }
+
+fun <U : Any> Flow<U>.share(scope: CoroutineScope): Flow<U> {
+
+    val references = AtomicInteger()
+    val subscription = AtomicReference<Job>()
+
+    val sharedBroadcastChannel = ConflatedBroadcastChannel<U>()
+
+    return flow {
+        logger.info { "Subscribing" }
+
+        if (references.getAndIncrement() == 0) {
+            logger.info { "Connecting" }
+            subscription.set(this@share.onEach { sharedBroadcastChannel.send(it) }.launchIn(scope))
+        }
+        onCompletion {
+            if (references.getAndDecrement() == 1) {
+                logger.info { "Disconnecting" }
+                subscription.getAndSet(null).cancel()
+            }
+        }
+        emitAll(sharedBroadcastChannel.openSubscription())
+    }
+}
 
 fun <T> ObservableValue<T>.asFlow(): Flow<T> = callbackFlow {
     val listener = ChangeListener<T> { _, _, newValue -> offer(newValue) }

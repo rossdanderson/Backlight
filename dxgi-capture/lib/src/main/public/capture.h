@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <ostream>
+#include <utility>
 #include <dxgi1_2.h>
 #include <atlbase.h>
 #include <d3d11.h>
@@ -37,13 +38,39 @@ inline std::ostream &operator<<(std::ostream &stream, const rectangle &rectangle
     return stream << "Rectangle(point1='" << rectangle.point1 << "', point2='" << rectangle.point2 << "')";
 }
 
+class captured {
+public:
+    captured() : array(nullptr) {};
+
+    captured(unsigned char *array) : array(array) {}
+
+    virtual ~captured() {
+        delete[] array;
+        array = nullptr;
+    }
+
+    unsigned char *getData() {
+        return array;
+    }
+
+    void releaseData() {
+        delete[] array;
+        array = nullptr;
+    }
+
+private:
+    unsigned char *array;
+};
+
 class capture {
 public:
     explicit capture(std::shared_ptr<logger> logger);
 
-    void init();
+    void init() noexcept(false);
 
     rectangle getDimensions();
+
+    std::shared_ptr<captured> getOutputBits() noexcept(false);
 
 private:
     std::shared_ptr<logger> logger;
@@ -53,6 +80,8 @@ private:
     CComPtr<ID3D11Device> device = nullptr;
     CComPtr<ID3D11DeviceContext> deviceContext = nullptr;
     CComPtr<IDXGIOutputDuplication> outputDuplication = nullptr;
+
+    CComPtr<IDXGISurface1> acquireNextFrame();
 };
 
 #endif //DXGICAPTURE_CAPTURE_H

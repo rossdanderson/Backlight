@@ -6,7 +6,9 @@ import com.github.rossdanderson.backlight.app.config.ConfigService
 import com.github.rossdanderson.backlight.app.delay
 import com.github.rossdanderson.backlight.app.flatMapLatest
 import com.github.rossdanderson.backlight.app.screen.IScreenService
+import com.github.rossdanderson.backlight.app.share
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.*
 import java.awt.Rectangle
 import java.awt.Robot
@@ -36,5 +38,7 @@ class RobotScreenService(
                     delay(minDelayMillis.milliseconds)
                 }
             }.flowOn(Dispatchers.IO)
-        }.flatMapLatest()
+        }
+            .flatMapLatest()
+            .share(GlobalScope)
 }

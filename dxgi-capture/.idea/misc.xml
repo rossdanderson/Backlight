@@ -11,12 +11,14 @@
       <file path="$PROJECT_DIR$/lib/src/main/include" />
       <file path="$PROJECT_DIR$/lib/src/main/public" />
     </sourceRoots>
+    <excludeRoots>
+      <file path="$PROJECT_DIR$/cmake-build-release" />
+    </excludeRoots>
   </component>
   <component name="JavaScriptSettings">
     <option name="languageLevel" value="ES6" />
   </component>
   <component name="ProjectPlainTextFileTypeManager">
     <file url="file://$PROJECT_DIR$/java/src/main/swig/Capture.i" />
-    <file url="file://$PROJECT_DIR$/java/src/main/swig/Logger.i" />
   </component>
 </project>
