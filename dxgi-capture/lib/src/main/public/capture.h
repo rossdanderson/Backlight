@@ -38,30 +38,6 @@ inline std::ostream &operator<<(std::ostream &stream, const rectangle &rectangle
     return stream << "Rectangle(point1='" << rectangle.point1 << "', point2='" << rectangle.point2 << "')";
 }
 
-class captured {
-public:
-    captured() : array(nullptr) {};
-
-    captured(unsigned char *array) : array(array) {}
-
-    virtual ~captured() {
-        delete[] array;
-        array = nullptr;
-    }
-
-    unsigned char *getData() {
-        return array;
-    }
-
-    void releaseData() {
-        delete[] array;
-        array = nullptr;
-    }
-
-private:
-    unsigned char *array;
-};
-
 class capture {
 public:
     explicit capture(std::shared_ptr<logger> logger);
@@ -70,7 +46,7 @@ public:
 
     rectangle getDimensions();
 
-    std::shared_ptr<captured> getOutputBits() noexcept(false);
+    size_t getOutputBits(unsigned char *inoutBuffer, size_t inoutBufferSize) noexcept(false);
 
 private:
     std::shared_ptr<logger> logger;

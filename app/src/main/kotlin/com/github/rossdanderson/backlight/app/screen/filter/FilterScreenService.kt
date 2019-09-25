@@ -29,21 +29,23 @@ class FilterScreenService(
             saturationAlphaFlow,
             contrastFactorFlow
         ) { bufferedImage, saturationAlpha, contrastFactor ->
-            Image(bufferedImage)
-                .map { rgb ->
-                    val greyscaleLuminosity = rgb.greyscaleLuminosity()
-                    Color(
-                        rgb.red
-                            .applySaturation(saturationAlpha, greyscaleLuminosity)
-                            .applyContrast(contrastFactor),
-                        rgb.green
-                            .applySaturation(saturationAlpha, greyscaleLuminosity)
-                            .applyContrast(contrastFactor),
-                        rgb.blue
-                            .applySaturation(saturationAlpha, greyscaleLuminosity)
-                            .applyContrast(contrastFactor)
-                    )
-                }
+            if (saturationAlpha != 1.0 || contrastFactor != 1.0) {
+                Image(bufferedImage)
+                    .map { rgb ->
+                        val greyscaleLuminosity = rgb.greyscaleLuminosity()
+                        Color(
+                            rgb.red
+                                .applySaturation(saturationAlpha, greyscaleLuminosity)
+                                .applyContrast(contrastFactor),
+                            rgb.green
+                                .applySaturation(saturationAlpha, greyscaleLuminosity)
+                                .applyContrast(contrastFactor),
+                            rgb.blue
+                                .applySaturation(saturationAlpha, greyscaleLuminosity)
+                                .applyContrast(contrastFactor)
+                        )
+                    }
+            }
             bufferedImage
         }
             .flowOn(Dispatchers.Default)

@@ -7,6 +7,7 @@
 #include "capture.h"
 %}
 
+%include "typemaps.i"
 %include "std_string.i"
 %include "std_wstring.i"
 %include "std_shared_ptr.i"
@@ -14,14 +15,11 @@
 %shared_ptr(logger);
 %feature("director") logger;
 
-%shared_ptr(captured);
-
 %ignore operator<<;
 
-%apply char * { unsigned char * };
+%apply signed char * INOUT { unsigned char * };
 
 %rename (Capture) capture;
-%rename (Captured) captured;
 %rename (Point) point;
 %rename (Rectangle) rectangle;
 %rename (Logger) logger;

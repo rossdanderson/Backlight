@@ -2,6 +2,7 @@
 #include "../include/captureUtils.h"
 #include <sstream>
 #include <iostream>
+#include <cmath>
 
 using namespace std;
 
@@ -111,26 +112,25 @@ void capture::init() {
 
 rectangle capture::getDimensions() {
     return rectangle(
-            point(dimensions.top, dimensions.left),
-            point(dimensions.bottom, dimensions.right)
+            point(dimensions.left, dimensions.top),
+            point(dimensions.right, dimensions.bottom)
     );
 }
 
+size_t capture::getOutputBits(unsigned char *inoutBuffer, size_t inoutBufferSize) {
 
-shared_ptr<captured> capture::getOutputBits() {
+    // TODO move this to a setter - must be power of 2 for ease
+    auto sample = 4;
+
+    long width = (dimensions.right - dimensions.left) / sample;
+    long height = (dimensions.bottom - dimensions.top) / sample;
+    size_t requiredBufferSize = width * height * 4;
+
+    // TODO move this to a separate method
+    if (inoutBufferSize < requiredBufferSize) {
+        return requiredBufferSize;
+    }
     try {
-        RECT outputDimensions;
-        CopyRect(&outputDimensions, &dimensions);
-        long width = outputDimensions.right - outputDimensions.left;
-        long height = outputDimensions.bottom - outputDimensions.top;
-
-        size_t bufferSize = width * height * 4;
-        auto buffer = make_unique<unsigned char[]>(bufferSize);
-
-        wostringstream infoStream;
-        infoStream << "Buffer size " << width << " * " << height << " * 4 = " << " " << bufferSize;
-        logger->info(infoStream.str());
-
         DXGI_OUTPUT_DESC outDesc;
         SUCCESS_OR_THROW(
                 "Unable to access output description",
@@ -142,75 +142,40 @@ shared_ptr<captured> capture::getOutputBits() {
         DXGI_MAPPED_RECT mappedRect;
         dxgiSurface1->Map(&mappedRect, DXGI_MAP_READ);
 
-        RECT desktopDimensions = outDesc.DesktopCoordinates;
-        long desktopWidth = desktopDimensions.right - desktopDimensions.left;
-        long desktopHeight = desktopDimensions.bottom - desktopDimensions.top;
-
-        OffsetRect(&desktopDimensions, -outputDimensions.left, -outputDimensions.top);
-
-        int mapPitchPixels = mappedRect.Pitch / 4;
-
         switch (outDesc.Rotation) {
-            case DXGI_MODE_ROTATION_UNSPECIFIED:
             case DXGI_MODE_ROTATION_IDENTITY: {
-                for (long y = 0; y < desktopHeight; y++) {
-                    auto yOffset = desktopDimensions.left + (y + desktopDimensions.top) * width;
-                    for (long x = 0; x < desktopWidth; x++) {
-                        long offset = yOffset + x;
-                        long sourceOffset = desktopWidth - x - 1 + mapPitchPixels * (desktopHeight - y - 1);
-                        BYTE source = *(mappedRect.pBits + sourceOffset);
-                        buffer[offset] = source;
+                for (long y = 0; y < height; y++) {
+                    auto sourceYOffset = y * mappedRect.Pitch * sample;
+                    auto bufferYOffset = y * width * 4;
+                    for (long x = 0; x < width; x++) {
+                        auto sourceXOffset = x * 4 * sample;
+                        auto bufferXOffset = x * 4;
+                        auto sourceOffset = sourceYOffset + sourceXOffset;
+                        auto bufferOffset = bufferYOffset + bufferXOffset;
+                        // Copies 4 bytes (BGRA)
+                        memcpy_s(
+                                inoutBuffer + bufferOffset,
+                                4,
+                                mappedRect.pBits + sourceOffset,
+                                4
+                        );
                     }
                 }
             }
                 break;
-            case DXGI_MODE_ROTATION_ROTATE90: {
-                for (long y = 0; y < desktopHeight; y++) {
-                    for (long x = 0; x < desktopWidth; x++) {
-                        long offset = desktopDimensions.left + (y + desktopDimensions.top) * width + x;
-                        long sourceOffset = y + mapPitchPixels * (desktopWidth - x - 1);
-                        BYTE source = *(mappedRect.pBits + sourceOffset);
-                        buffer[offset] = source;
-                    }
-                }
-            }
-                break;
-            case DXGI_MODE_ROTATION_ROTATE180: {
-                for (long y = 0; y < desktopHeight; y++) {
-                    auto yOffset = desktopDimensions.left + (y + desktopDimensions.top) * width;
-                    for (long x = 0; x < desktopWidth; x++) {
-                        long offset = yOffset + x;
-                        long sourceOffset = desktopWidth - x - 1 + mapPitchPixels * (desktopHeight - y - 1);
-                        BYTE source = *(mappedRect.pBits + sourceOffset);
-                        buffer[offset] = source;
-                    }
-                }
-            }
-                break;
-            case DXGI_MODE_ROTATION_ROTATE270: {
-                for (long y = 0; y < desktopHeight; y++) {
-                    long yOffset = desktopDimensions.left + (y + desktopDimensions.top) * width;
-                    for (long x = 0; x < desktopWidth; x++) {
-                        long offset = yOffset + x;
-                        long sourceOffset = (desktopHeight - y - 1) + mapPitchPixels * x;
-                        BYTE source = *(mappedRect.pBits + sourceOffset);
-                        buffer[offset] = source;
-                    }
-                }
-            }
-                break;
+            default:
+                // TODO handle different rotations...
+                return 0;
         }
         dxgiSurface1->Unmap();
         outputDuplication->ReleaseFrame();
 
-
-        wostringstream infoStream1;
-        infoStream1 << "Released";
-        logger->info(infoStream1.str());
-        return make_shared<class captured>(buffer.release());
+        return requiredBufferSize;
     } catch (exception &e) {
-        cout << e.what() << endl;
-        return make_shared<class captured>();
+        wostringstream errorStream;
+        errorStream << e.what();
+        logger->error(errorStream.str());
+        throw e;
     }
 }
 

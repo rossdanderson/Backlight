@@ -32,6 +32,8 @@ class MainView : BaseView() {
         prefWidth = 800.0
         prefHeight = 600.0
         center {
+            paddingTop = 10
+            paddingLeft = 10
             hbox(5) {
                 vbox {
                     vbox {
@@ -45,7 +47,7 @@ class MainView : BaseView() {
                             }
                             isPreserveRatio = true
                             fitWidth = 512.0
-                            effect = GaussianBlur()
+//                            effect = GaussianBlur()
                         }
                     }
 

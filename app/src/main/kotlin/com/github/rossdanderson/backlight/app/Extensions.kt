@@ -10,11 +10,14 @@ import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import mu.KLogger
 import mu.KotlinLogging
 import java.awt.Color
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.INFINITE
+import kotlin.time.Duration.Companion.ZERO
 import kotlin.time.ExperimentalTime
 
 fun Int.applySaturation(alpha: Double, greyscaleLuminosity: Double): Int =
@@ -27,7 +30,7 @@ fun Color.greyscaleLuminosity() = red * 0.299 + green * 0.587 + blue * 0.114
 
 fun <U : Any> Flow<Flow<U>>.flatMapLatest(): Flow<U> = flatMapLatest { it }
 
-val logger = KotlinLogging.logger {  }
+val logger = KotlinLogging.logger { }
 
 fun <U : Any> Flow<U>.share(scope: CoroutineScope): Flow<U> {
 
@@ -58,6 +61,29 @@ fun <T> ObservableValue<T>.asFlow(): Flow<T> = callbackFlow {
     addListener(listener)
     awaitClose {
         removeListener(listener)
+    }
+}
+
+// Should be called from single thread
+@ExperimentalTime
+fun KLogger.logDurations(message: String, times: Int): (Duration) -> Unit {
+    var count = 0
+    var totalDuration = ZERO
+    var minDuration = INFINITE
+    var maxDuration = ZERO
+
+    return { duration ->
+        count++
+        totalDuration += duration
+        minDuration = minOf(minDuration, duration)
+        maxDuration = maxOf(maxDuration, duration)
+        if (count >= 10) {
+            info { "$message - count: $count total: $totalDuration - avg: ${totalDuration / 10} - min: $minDuration - max: $maxDuration" }
+            count = 0
+            totalDuration = ZERO
+            minDuration = INFINITE
+            maxDuration = ZERO
+        }
     }
 }
 
