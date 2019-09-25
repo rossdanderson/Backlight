@@ -62,7 +62,7 @@ class BacklightApp : App(MainView::class), CoroutineScope by MainScope() {
                         if (getPropertyOrNull<String>("legacy-screen-capture")?.toBoolean() == true) RobotScreenService(
                             get()
                         )
-                        else DXGIScreenService()
+                        else DXGIScreenService(get())
                     }
                     single { ApplicationState() }
                     single { FilterScreenService(get(), get()) }

@@ -78,7 +78,7 @@ class MockSerialService : ISerialService {
 
     override suspend fun send(message: Message) = withContext(Dispatchers.IO) {
         if (connectedPort.get() != null) {
-            logger.warn { "Message sent - $message" }
+            logger.debug { "Message sent - $message" }
         } else {
             logger.warn { "Message dropped - $message - not currently connected" }
         }

@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <ostream>
+#include <utility>
 #include <dxgi1_2.h>
 #include <atlbase.h>
 #include <d3d11.h>
@@ -41,9 +42,11 @@ class capture {
 public:
     explicit capture(std::shared_ptr<logger> logger);
 
-    void init();
+    void init() noexcept(false);
 
     rectangle getDimensions();
+
+    size_t getOutputBits(unsigned char *inoutBuffer, size_t inoutBufferSize) noexcept(false);
 
 private:
     std::shared_ptr<logger> logger;
@@ -53,6 +56,8 @@ private:
     CComPtr<ID3D11Device> device = nullptr;
     CComPtr<ID3D11DeviceContext> deviceContext = nullptr;
     CComPtr<IDXGIOutputDuplication> outputDuplication = nullptr;
+
+    CComPtr<IDXGISurface1> acquireNextFrame();
 };
 
 #endif //DXGICAPTURE_CAPTURE_H

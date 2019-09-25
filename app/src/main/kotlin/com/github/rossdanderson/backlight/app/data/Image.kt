@@ -22,7 +22,7 @@ data class Image(
     }
 
     fun map(action: (Color) -> Color) {
-        (0 until pixels.size).forEach { pixels[it] = action(Color(pixels[it])).rgb }
+        (pixels.indices).forEach { pixels[it] = action(Color(pixels[it])).rgb }
     }
 
     override fun equals(other: Any?): Boolean {
