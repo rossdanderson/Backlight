@@ -77,7 +77,7 @@ fun KLogger.logDurations(message: String, times: Int): (Duration) -> Unit {
         totalDuration += duration
         minDuration = minOf(minDuration, duration)
         maxDuration = maxOf(maxDuration, duration)
-        if (count >= 10) {
+        if (count >= times) {
             info { "$message - count: $count total: $totalDuration - avg: ${totalDuration / 10} - min: $minDuration - max: $maxDuration" }
             count = 0
             totalDuration = ZERO

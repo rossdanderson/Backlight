@@ -14,6 +14,18 @@ class ControlView : BaseView() {
     private val controlViewModel by inject<ControlViewModel>()
 
     override val root = vbox {
+        val brightnessLabel = label("Brightness:")
+        hbox {
+            val brightnessSlider = slider(0.0, 10.0) {
+                launch { controlViewModel.brightnessFlow.collect { value = it } }
+                valueProperty().onChange { launch { controlViewModel.updateBrightness(it) } }
+            }
+            button("Reset") {
+                setOnMouseClicked { launch { controlViewModel.updateBrightness(1.0) } }
+            }
+            brightnessLabel.labelFor = brightnessSlider
+        }
+
         val saturationLabel = label("Saturation:")
         hbox {
             val saturationSlider = slider(0.0, 10.0) {
@@ -28,7 +40,7 @@ class ControlView : BaseView() {
 
         val contrastLabel = label("Contrast:")
         hbox {
-            val contrastSlider = slider(0.0, 10.0) {
+            val contrastSlider = slider(0.0, 100.0) {
                 launch { controlViewModel.contrastFlow.collect { value = it } }
                 valueProperty().onChange { launch { controlViewModel.updateContrast(it) } }
             }

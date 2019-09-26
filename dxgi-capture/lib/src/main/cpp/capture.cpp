@@ -120,7 +120,7 @@ rectangle capture::getDimensions() {
 size_t capture::getOutputBits(unsigned char *inoutBuffer, size_t inoutBufferSize) {
 
     // TODO move this to a setter - must be power of 2 for ease
-    auto sample = 4;
+    auto sample = 32;
 
     long width = (dimensions.right - dimensions.left) / sample;
     long height = (dimensions.bottom - dimensions.top) / sample;

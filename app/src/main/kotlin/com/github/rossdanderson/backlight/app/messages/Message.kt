@@ -11,7 +11,8 @@ enum class Header {
     HEARTBEAT_ACK,
     HANDSHAKE_REQUEST,
     HANDSHAKE_RESPONSE,
-    PRINT;
+    PRINT,
+    SET_BRIGHTNESS;
 
     fun toUByte(): UByte = ordinal.toUByte()
 }
@@ -29,6 +30,7 @@ interface Message {
                 HANDSHAKE_REQUEST -> HandshakeRequestMessage
                 HANDSHAKE_RESPONSE -> HandshakeResponseMessage(uByteArray)
                 PRINT -> PrintMessage(uByteArray)
+                SET_BRIGHTNESS -> SetBrightnessMessage(uByteArray)
                 else -> throw IllegalArgumentException("Unknown message type $header")
             }
         }

@@ -9,9 +9,10 @@ import kotlin.time.ExperimentalTime
 @Serializable
 data class Config(
     val defaultPort: String? = null,
-    val minDelayMillis: Long = 50,
+    val minDelayMillis: Long = 10,
     val saturationAlpha: Double = 1.5,
-    val contrast: Double = 7.0
+    val contrast: Double = 7.0,
+    val brightness: Double = 5.0
 ) {
     @Transient
     val contrastFactor: Double = (259.0 * (contrast + 255.0)) / (255.0 * (259.0 - contrast))
@@ -25,6 +26,11 @@ data class Config(
         val minDelayMillisLens = Lens<Config, Long>(
             get = { s -> s.minDelayMillis },
             set = { s, a -> s.copy(minDelayMillis = a) }
+        )
+
+        val brightnessLens = Lens<Config, Double>(
+            get = { s -> s.brightness },
+            set = { s, a -> s.copy(brightness = a) }
         )
 
         val saturationAlphaLens = Lens<Config, Double>(

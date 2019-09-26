@@ -181,9 +181,9 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
 
     private fun SerialPort.writeMessage(message: Message) {
         val backingArray = message.backingArray.toByteArray()
-        logger.info { "Encoding and writing bytes ${backingArray.contentToString()}" }
+        logger.debug { "Encoding and writing bytes ${backingArray.contentToString()}" }
         val encoded = backingArray.cobsEncode()
         val bytes = encoded + 0u.toUByte().toByte()
-        if (writeBytes(bytes, bytes.size.toLong()) == -1) throw IllegalStateException("Failure to write")
+        check(writeBytes(bytes, bytes.size.toLong()) != -1) { "Failure to write" }
     }
 }

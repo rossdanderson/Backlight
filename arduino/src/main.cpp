@@ -112,6 +112,14 @@ static size_t getEncodedBufferSize(size_t unencodedBufferSize)
   return unencodedBufferSize + unencodedBufferSize / 254 + 1;
 }
 
+void handleSetBrightnessMessage(uint8_t decodedBuffer[])
+{
+  byte brightness = decodedBuffer[1];
+
+  strip.setBrightness(brightness);
+  strip.show();
+}
+
 void handleWriteLEDMessage(uint8_t decodedBuffer[])
 {
   byte index = decodedBuffer[1];
@@ -212,8 +220,11 @@ void loop()
     sendMessagef("Decoded size: %d", decodedSize);
 
     uint8_t header = decodedBuffer[0];
-
-    if (header == writeLED && decodedSize == writeLEDSize)
+    if (header == setBrightness && decodedSize == setBrightnessSize)
+    {
+      handleSetBrightnessMessage(decodedBuffer);
+    } 
+    else if (header == writeLED && decodedSize == writeLEDSize)
     {
       handleWriteLEDMessage(decodedBuffer);
     }

@@ -5,6 +5,7 @@ package com.github.rossdanderson.backlight.app.daemon
 import com.github.rossdanderson.backlight.app.config.Config
 import com.github.rossdanderson.backlight.app.config.ConfigService
 import com.github.rossdanderson.backlight.app.led.LEDService
+import com.github.rossdanderson.backlight.app.messages.SetBrightnessMessage
 import com.github.rossdanderson.backlight.app.messages.WriteAllMessage
 import com.github.rossdanderson.backlight.app.serial.ConnectResult
 import com.github.rossdanderson.backlight.app.serial.ConnectionState
@@ -28,6 +29,12 @@ class DaemonJobManager(
             serialService.connectionStateFlow
                 .flatMapLatest { if (it is ConnectionState.Connected) ledService.ledColorsFlow else emptyFlow() }
                 .collect { serialService.send(WriteAllMessage(it)) }
+        }
+
+        // Bind the led flow to serial out
+        launch {
+            configService.configFlow.map { it.brightness }
+                .collect { serialService.send(SetBrightnessMessage((it / 10 * 255).toInt().toUByte())) }
         }
 
         // On startup, attempt to connect to the last known port
