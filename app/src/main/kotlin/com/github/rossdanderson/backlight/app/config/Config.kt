@@ -10,9 +10,10 @@ import kotlin.time.ExperimentalTime
 data class Config(
     val defaultPort: String? = null,
     val minDelayMillis: Long = 10,
-    val saturationAlpha: Double = 1.5,
-    val contrast: Double = 7.0,
-    val brightness: Double = 5.0
+    val saturationAlpha: Double = 1.0,
+    val contrast: Double = 1.0,
+    val brightness: Double = 5.0,
+    val sampleStep: Int = 32
 ) {
     @Transient
     val contrastFactor: Double = (259.0 * (contrast + 255.0)) / (255.0 * (259.0 - contrast))
@@ -41,6 +42,11 @@ data class Config(
         val contrastLens = Lens<Config, Double>(
             get = { s -> s.contrast },
             set = { s, a -> s.copy(contrast = a) }
+        )
+
+        val sampleStepLens = Lens<Config, Int>(
+            get = { s -> s.sampleStep },
+            set = { s, a -> s.copy(sampleStep = a) }
         )
     }
 }

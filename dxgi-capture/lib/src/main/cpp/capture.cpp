@@ -10,7 +10,7 @@ capture::capture(std::shared_ptr<class logger> logger) {
     this->logger = std::move(logger);
 }
 
-void capture::init() {
+size_t capture::init(long sampleStep) {
     MONITORINFO monitorInfo;
     monitorInfo.cbSize = sizeof(MONITORINFO);
 
@@ -102,12 +102,19 @@ void capture::init() {
             )
     );
 
-    this->adapter1 = adapter1;
+    this->sampleStep = sampleStep;
     this->output1 = output1;
     this->device = device;
     this->deviceContext = deviceContext;
     this->outputDuplication = outputDuplication;
+
+    width = (dimensions.right - dimensions.left) / sampleStep;
+    height = (dimensions.bottom - dimensions.top) / sampleStep;
+    requiredBufferSize = width * height * 4;
+
     CopyRect(&dimensions, &outputDesc.DesktopCoordinates);
+
+    return requiredBufferSize;
 }
 
 rectangle capture::getDimensions() {
@@ -119,16 +126,9 @@ rectangle capture::getDimensions() {
 
 size_t capture::getOutputBits(unsigned char *inoutBuffer, size_t inoutBufferSize) {
 
-    // TODO move this to a setter - must be power of 2 for ease
-    auto sample = 32;
-
-    long width = (dimensions.right - dimensions.left) / sample;
-    long height = (dimensions.bottom - dimensions.top) / sample;
-    size_t requiredBufferSize = width * height * 4;
-
     // TODO move this to a separate method
     if (inoutBufferSize < requiredBufferSize) {
-        return requiredBufferSize;
+        return 0;
     }
     try {
         DXGI_OUTPUT_DESC outDesc;
@@ -145,10 +145,10 @@ size_t capture::getOutputBits(unsigned char *inoutBuffer, size_t inoutBufferSize
         switch (outDesc.Rotation) {
             case DXGI_MODE_ROTATION_IDENTITY: {
                 for (long y = 0; y < height; y++) {
-                    auto sourceYOffset = y * mappedRect.Pitch * sample;
+                    auto sourceYOffset = y * mappedRect.Pitch * sampleStep;
                     auto bufferYOffset = y * width * 4;
                     for (long x = 0; x < width; x++) {
-                        auto sourceXOffset = x * 4 * sample;
+                        auto sourceXOffset = x * 4 * sampleStep;
                         auto bufferXOffset = x * 4;
                         auto sourceOffset = sourceYOffset + sourceXOffset;
                         auto bufferOffset = bufferYOffset + bufferXOffset;

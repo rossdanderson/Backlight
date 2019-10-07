@@ -32,6 +32,14 @@ struct rectangle {
                                                     point2(point(x2, y2)) {}
 
     rectangle(const point &point1, const point &point2) : point1(point1), point2(point2) {}
+
+    long width() {
+        return abs(point1.x - point2.x);
+    }
+
+    long height() {
+        return abs(point1.y - point2.y);
+    }
 };
 
 inline std::ostream &operator<<(std::ostream &stream, const rectangle &rectangle) {
@@ -42,7 +50,7 @@ class capture {
 public:
     explicit capture(std::shared_ptr<logger> logger);
 
-    void init() noexcept(false);
+    size_t init(long sampleStep) noexcept(false);
 
     rectangle getDimensions();
 
@@ -50,8 +58,11 @@ public:
 
 private:
     std::shared_ptr<logger> logger;
+    long sampleStep = 1;
+    long width = 0;
+    long height = 0;
+    size_t requiredBufferSize = 0;
     RECT dimensions = RECT();
-    CComPtr<IDXGIAdapter1> adapter1 = nullptr;
     CComQIPtr<IDXGIOutput1> output1 = nullptr;
     CComPtr<ID3D11Device> device = nullptr;
     CComPtr<ID3D11DeviceContext> deviceContext = nullptr;

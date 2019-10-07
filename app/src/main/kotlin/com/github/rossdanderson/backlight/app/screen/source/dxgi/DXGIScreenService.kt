@@ -28,7 +28,7 @@ class DXGIScreenService(
     private val capture = Capture(nativeLogger)
 
     init {
-        capture.init()
+        capture.init(32)
     }
 
     private val minDelayMillisFlow = configService.configFlow.map { it.minDelayMillis }.distinctUntilChanged()
@@ -42,7 +42,8 @@ class DXGIScreenService(
                         flow {
                             while (true) {
                                 val time = measureTime {
-                                    val size = capture.getOutputBits(byteArrayOf(1), 1)
+                                    val dimensions = capture.dimensions
+                                    val size = (dimensions.width() * dimensions.height()).toLong() * 4
                                     val array = ByteArray(size.toInt())
 
                                     val timedValue = measureTimedValue {
@@ -51,7 +52,6 @@ class DXGIScreenService(
                                     captureLogger(timedValue.duration)
 
                                     if (timedValue.value >= size) {
-                                        val dimensions = capture.dimensions
                                         val sample = 32 // TODO have this as config
                                         val width = dimensions.point2.x / sample
                                         val height = dimensions.point2.y / sample
