@@ -46,17 +46,27 @@ inline std::ostream &operator<<(std::ostream &stream, const rectangle &rectangle
     return stream << "Rectangle(point1='" << rectangle.point1 << "', point2='" << rectangle.point2 << "')";
 }
 
+enum captureResult{
+    Success,
+    FailureInitRequired,
+    FailureBufferTooSmall,
+    FailureNotImplemented
+};
+
 class capture {
 public:
     explicit capture(std::shared_ptr<logger> logger);
 
     size_t init(long sampleStep) noexcept(false);
 
+    void reset();
+
     rectangle getDimensions();
 
-    size_t getOutputBits(unsigned char *inoutBuffer, size_t inoutBufferSize) noexcept(false);
+    captureResult getOutputBits(unsigned char *inoutBuffer, size_t inoutBufferSize) noexcept(false);
 
 private:
+    boolean initialised = false;
     std::shared_ptr<logger> logger;
     long sampleStep = 1;
     long width = 0;

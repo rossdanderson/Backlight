@@ -5,9 +5,11 @@ package com.github.rossdanderson.backlight.app.screen.source.dxgi
 import com.github.rossdanderson.backlight.app.config.ConfigService
 import com.github.rossdanderson.backlight.app.data.Image
 import com.github.rossdanderson.backlight.app.delay
+import com.github.rossdanderson.backlight.app.flatMapLatest
 import com.github.rossdanderson.backlight.app.logDurations
 import com.github.rossdanderson.backlight.app.screen.IScreenService
 import com.github.rossdanderson.backlight.app.screen.source.dxgi.generated.Capture
+import com.github.rossdanderson.backlight.app.screen.source.dxgi.generated.CaptureResult.*
 import com.github.rossdanderson.backlight.app.screen.source.dxgi.generated.Logger
 import com.github.rossdanderson.backlight.app.share
 import kotlinx.coroutines.Dispatchers
@@ -25,36 +27,38 @@ class DXGIScreenService(
     configService: ConfigService
 ) : IScreenService {
 
-    private val capture = Capture(nativeLogger)
-
-    init {
-        capture.init(32)
-    }
-
     private val minDelayMillisFlow = configService.configFlow.map { it.minDelayMillis }.distinctUntilChanged()
+    private val sampleStepFlow = configService.configFlow.map { it.sampleStep }.distinctUntilChanged()
 
     override val screenFlow: Flow<BufferedImage> =
         flow<BufferedImage> {
+            val capture = Capture(nativeLogger)
             val captureLogger = logger.logDurations("Captures", 100)
             emitAll(
-                minDelayMillisFlow
-                    .flatMapLatest { minDelayMillis ->
-                        flow {
-                            while (true) {
-                                val time = measureTime {
-                                    val dimensions = capture.dimensions
-                                    val size = (dimensions.width() * dimensions.height()).toLong() * 4
-                                    val array = ByteArray(size.toInt())
+                combine(sampleStepFlow, minDelayMillisFlow) { sampleStep, minDelayMillis ->
+                    flow {
+                        initLoop@ while (true) {
+                            val arraySize = capture.init(sampleStep)
+                            logger.info { "Using buffer array size: $arraySize" }
+                            if (arraySize == 0L) {
+                                delay(1.seconds)
+                                continue@initLoop
+                            }
 
-                                    val timedValue = measureTimedValue {
-                                        capture.getOutputBits(array, size)
-                                    }
-                                    captureLogger(timedValue.duration)
+                            val dimensions = capture.dimensions
+                            val width = dimensions.width()
+                            val height = dimensions.height()
 
-                                    if (timedValue.value >= size) {
-                                        val sample = 32 // TODO have this as config
-                                        val width = dimensions.point2.x / sample
-                                        val height = dimensions.point2.y / sample
+                            captureLoop@ while (true) {
+                                val startTime = System.currentTimeMillis()
+                                val array = ByteArray(arraySize.toInt())
+                                val (captureResult, captureDuration) = measureTimedValue {
+                                    capture.getOutputBits(array, arraySize)
+                                }
+                                captureLogger(captureDuration)
+
+                                when (captureResult) {
+                                    Success -> {
                                         val bufferedImage = BufferedImage(width, height, TYPE_INT_RGB)
                                         Image(bufferedImage).apply {
                                             (0 until height).forEach { y ->
@@ -72,18 +76,24 @@ class DXGIScreenService(
                                                     )
                                                 }
                                             }
+                                            emit(bufferedImage)
                                         }
-                                        emit(bufferedImage)
                                     }
+                                    FailureBufferTooSmall -> continue@initLoop
+                                    FailureInitRequired -> continue@initLoop
+                                    FailureNotImplemented -> TODO("Not currently implemented")
                                 }
 
-                                val delayDuration = minDelayMillis.milliseconds - time
+                                val delayDuration =
+                                    minDelayMillis.milliseconds - (System.currentTimeMillis() - startTime).milliseconds
                                 if (delayDuration > Duration.ZERO) {
                                     delay(delayDuration)
                                 }
                             }
-                        }.flowOn(Dispatchers.IO)
-                    }
+                        }
+                    }.flowOn(Dispatchers.IO)
+                }
+                    .flatMapLatest()
             )
         }
             .share(GlobalScope)

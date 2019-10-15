@@ -20,6 +20,7 @@
 %apply signed char * INOUT { unsigned char * };
 
 %rename (Capture) capture;
+%rename (CaptureResult) captureResult;
 %rename (Point) point;
 %rename (Rectangle) rectangle;
 %rename (Logger) logger;

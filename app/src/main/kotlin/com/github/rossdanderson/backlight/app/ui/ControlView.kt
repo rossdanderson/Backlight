@@ -26,6 +26,18 @@ class ControlView : BaseView() {
             brightnessLabel.labelFor = brightnessSlider
         }
 
+        val sampleStepLabel = label("Sample step:")
+        hbox {
+            val sampleStepSlider = slider(1, 50) {
+                launch { controlViewModel.sampleStepFlow.collect { value = it.toDouble() } }
+                valueProperty().onChange { launch { controlViewModel.updateSampleStep(it.toInt()) } }
+            }
+            button("Reset") {
+                setOnMouseClicked { launch { controlViewModel.updateSampleStep(1) } }
+            }
+            sampleStepLabel.labelFor = sampleStepSlider
+        }
+
         val saturationLabel = label("Saturation:")
         hbox {
             val saturationSlider = slider(0.0, 10.0) {

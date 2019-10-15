@@ -11,6 +11,8 @@ capture::capture(std::shared_ptr<class logger> logger) {
 }
 
 size_t capture::init(long sampleStep) {
+    reset();
+
     MONITORINFO monitorInfo;
     monitorInfo.cbSize = sizeof(MONITORINFO);
 
@@ -56,15 +58,16 @@ size_t capture::init(long sampleStep) {
     SUCCESS_OR_THROW("Unable to access output description", output->GetDesc(&outputDesc));
 
     wostringstream infoStream;
+    RECT &desktopCoordinates = outputDesc.DesktopCoordinates;
     infoStream << "Adapter output found:"
                << " Description='" << adapterDesc.Description
                << "', DeviceId='" << adapterDesc.DeviceId
                << "', DeviceName='" << outputDesc.DeviceName
                << "', Rotation='" << outputDesc.Rotation
-               << "', DesktopCoordinates='(" << outputDesc.DesktopCoordinates.left
-               << "," << outputDesc.DesktopCoordinates.top
-               << "),(" << outputDesc.DesktopCoordinates.right
-               << "," << outputDesc.DesktopCoordinates.bottom
+               << "', DesktopCoordinates='(" << desktopCoordinates.left
+               << "," << desktopCoordinates.top
+               << "),(" << desktopCoordinates.right
+               << "," << desktopCoordinates.bottom
                << ")'";
     logger->info(infoStream.str());
 
@@ -102,34 +105,33 @@ size_t capture::init(long sampleStep) {
             )
     );
 
+    initialised = true;
     this->sampleStep = sampleStep;
     this->output1 = output1;
     this->device = device;
     this->deviceContext = deviceContext;
     this->outputDuplication = outputDuplication;
 
-    width = (dimensions.right - dimensions.left) / sampleStep;
-    height = (dimensions.bottom - dimensions.top) / sampleStep;
-    requiredBufferSize = width * height * 4;
+    CopyRect(&dimensions, &desktopCoordinates);
 
-    CopyRect(&dimensions, &outputDesc.DesktopCoordinates);
+    width = (desktopCoordinates.right - desktopCoordinates.left) / sampleStep;
+    height = (desktopCoordinates.bottom - desktopCoordinates.top) / sampleStep;
+    requiredBufferSize = width * height * 4;
 
     return requiredBufferSize;
 }
 
 rectangle capture::getDimensions() {
     return rectangle(
-            point(dimensions.left, dimensions.top),
-            point(dimensions.right, dimensions.bottom)
+            point(0, height),
+            point(width, 0)
     );
 }
 
-size_t capture::getOutputBits(unsigned char *inoutBuffer, size_t inoutBufferSize) {
+captureResult capture::getOutputBits(unsigned char *inoutBuffer, size_t inoutBufferSize) {
+    if (!initialised) return captureResult::FailureInitRequired;
+    if (inoutBufferSize < requiredBufferSize) return captureResult::FailureBufferTooSmall;
 
-    // TODO move this to a separate method
-    if (inoutBufferSize < requiredBufferSize) {
-        return 0;
-    }
     try {
         DXGI_OUTPUT_DESC outDesc;
         SUCCESS_OR_THROW(
@@ -165,12 +167,12 @@ size_t capture::getOutputBits(unsigned char *inoutBuffer, size_t inoutBufferSize
                 break;
             default:
                 // TODO handle different rotations...
-                return 0;
+                return captureResult::FailureNotImplemented;
         }
         dxgiSurface1->Unmap();
         outputDuplication->ReleaseFrame();
 
-        return requiredBufferSize;
+        return captureResult::Success;
     } catch (exception &e) {
         wostringstream errorStream;
         errorStream << e.what();
@@ -212,4 +214,15 @@ CComPtr<IDXGISurface1> capture::acquireNextFrame() {
     deviceContext->CopyResource(toTexture2D, fromTexture2D);
 
     return CComQIPtr<IDXGISurface1>(toTexture2D);
+}
+
+void capture::reset() {
+    if (initialised) {
+        initialised = false;
+        sampleStep = 0;
+        output1.Release();
+        device.Release();
+        deviceContext.Release();
+        outputDuplication.Release();
+    }
 }

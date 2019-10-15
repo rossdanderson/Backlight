@@ -11,7 +11,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import mu.KLogger
-import mu.KotlinLogging
 import java.awt.Color
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -30,8 +29,6 @@ fun Color.greyscaleLuminosity() = red * 0.299 + green * 0.587 + blue * 0.114
 
 fun <U : Any> Flow<Flow<U>>.flatMapLatest(): Flow<U> = flatMapLatest { it }
 
-val logger = KotlinLogging.logger { }
-
 fun <U : Any> Flow<U>.share(scope: CoroutineScope): Flow<U> {
 
     val references = AtomicInteger()
@@ -40,15 +37,11 @@ fun <U : Any> Flow<U>.share(scope: CoroutineScope): Flow<U> {
     val sharedBroadcastChannel = ConflatedBroadcastChannel<U>()
 
     return flow {
-        logger.info { "Subscribing" }
-
         if (references.getAndIncrement() == 0) {
-            logger.info { "Connecting" }
             subscription.set(this@share.onEach { sharedBroadcastChannel.send(it) }.launchIn(scope))
         }
         onCompletion {
             if (references.getAndDecrement() == 1) {
-                logger.info { "Disconnecting" }
                 subscription.getAndSet(null).cancel()
             }
         }

@@ -4,6 +4,7 @@ package com.github.rossdanderson.backlight.app.ui
 
 import com.github.rossdanderson.backlight.app.config.Config.Companion.brightnessLens
 import com.github.rossdanderson.backlight.app.config.Config.Companion.contrastLens
+import com.github.rossdanderson.backlight.app.config.Config.Companion.sampleStepLens
 import com.github.rossdanderson.backlight.app.config.Config.Companion.saturationAlphaLens
 import com.github.rossdanderson.backlight.app.config.ConfigService
 import com.github.rossdanderson.backlight.app.ui.base.BaseViewModel
@@ -22,6 +23,13 @@ class ControlViewModel : BaseViewModel() {
 
     val updateBrightness = command<Double>(debounce = 100.milliseconds) { brightness ->
         configService.set(brightnessLens, brightness)
+    }
+
+    val sampleStepFlow = configService.configFlow
+        .map { it.sampleStep }
+
+    val updateSampleStep = command<Int>(debounce = 100.milliseconds) { sampleStep ->
+        configService.set(sampleStepLens, sampleStep)
     }
 
     val saturationFlow = configService.configFlow
