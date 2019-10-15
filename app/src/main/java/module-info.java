@@ -11,6 +11,7 @@ module backlight.app {
     requires kotlin.logging;
     requires javafx.swing;
     requires kotlinx.serialization.runtime;
+    requires org.apache.logging.log4j;
 
     exports com.github.rossdanderson.backlight.app;
     exports com.github.rossdanderson.backlight.app.ui;

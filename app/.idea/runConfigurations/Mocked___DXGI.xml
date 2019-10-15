@@ -1,13 +1,13 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Mocked - DXGI" type="JetRunConfigurationType" factoryName="Kotlin">
     <module name="app.main" />
-    <option name="VM_PARAMETERS" value="-ea -XX:+CreateCoredumpOnCrash" />
+    <option name="VM_PARAMETERS" value="-ea -Dlog4j.configurationFile=config/log4j2.xml" />
     <option name="PROGRAM_PARAMETERS" value="" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
     <option name="ALTERNATIVE_JRE_PATH" />
     <option name="PASS_PARENT_ENVS" value="true" />
     <option name="MAIN_CLASS_NAME" value="com.github.rossdanderson.backlight.app.BacklightApplicationKt" />
-    <option name="WORKING_DIRECTORY" value="" />
+    <option name="WORKING_DIRECTORY" value="file://$MODULE_WORKING_DIR$" />
     <envs>
       <env name="mock-serial-connection" value="true" />
     </envs>

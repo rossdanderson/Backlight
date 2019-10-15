@@ -105,14 +105,13 @@ size_t capture::init(long sampleStep) {
             )
     );
 
-    initialised = true;
     this->sampleStep = sampleStep;
     this->output1 = output1;
     this->device = device;
     this->deviceContext = deviceContext;
     this->outputDuplication = outputDuplication;
-
     CopyRect(&dimensions, &desktopCoordinates);
+    initialised = true;
 
     width = (desktopCoordinates.right - desktopCoordinates.left) / sampleStep;
     height = (desktopCoordinates.bottom - desktopCoordinates.top) / sampleStep;
