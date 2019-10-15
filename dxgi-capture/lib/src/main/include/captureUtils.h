@@ -7,13 +7,13 @@
 
 #define SUCCESS_OR_THROW(message, hresult) captureUtils::checkHResult(message, hresult, __FILE__, __LINE__)
 
-#include "hResultException.h"
+#include "hresultException.h"
 
 namespace captureUtils {
 
     inline void checkHResult(const std::string &message, HRESULT hResult, const std::string &file, int line) {
         if (FAILED(hResult)) {
-            throw hResultException(message, hResult, file, line);
+            throw hresultException(message, hResult, file, line);
         }
     }
 }

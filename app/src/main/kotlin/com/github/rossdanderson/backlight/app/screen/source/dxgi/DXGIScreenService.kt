@@ -39,11 +39,13 @@ class DXGIScreenService(
                     flow {
                         initLoop@ while (true) {
                             val arraySize = capture.init(sampleStep)
-                            logger.info { "Using buffer array size: $arraySize" }
                             if (arraySize == 0L) {
-                                delay(1.seconds)
+                                val duration = 1.seconds
+                                logger.warn { "Unable to initialise, retrying in $duration" }
+                                delay(duration)
                                 continue@initLoop
                             }
+                            logger.info { "Using buffer array size: $arraySize" }
 
                             val dimensions = capture.dimensions
                             val width = dimensions.width()
