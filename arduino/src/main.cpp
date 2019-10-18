@@ -8,7 +8,14 @@
 //   a LOGIC-LEVEL CONVERTER on the data line is STRONGLY RECOMMENDED.
 // (Skipping these may work OK on your workbench but can fail in the field)
 #include "main.h"
+#include "state.h"
 
+unsigned long time;
+unsigned long lastPrint = 0;
+unsigned long lastMessage = 0;
+byte userDefinedBrightness = 255;
+byte currentBrightness = userDefinedBrightness;
+state currentState = Disconnected;
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 void setup()
@@ -16,7 +23,7 @@ void setup()
   Serial.begin(115200);
   Serial.setTimeout(100);
 
-  strip.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
+  strip.begin();
   strip.show();
   // Run a test sequence
   strip.setBrightness(255);
@@ -114,43 +121,55 @@ static size_t getEncodedBufferSize(size_t unencodedBufferSize)
 
 void handleSetBrightnessMessage(uint8_t decodedBuffer[])
 {
-  byte brightness = decodedBuffer[1];
+  if (currentState == Streaming)
+  {
+    userDefinedBrightness = decodedBuffer[1];
+    currentBrightness = userDefinedBrightness;
 
-  strip.setBrightness(brightness);
-  strip.show();
+    strip.setBrightness(currentBrightness);
+    strip.show();
+  }
 }
 
 void handleWriteLEDMessage(uint8_t decodedBuffer[])
 {
-  byte index = decodedBuffer[1];
-  byte red = decodedBuffer[2];
-  byte green = decodedBuffer[3];
-  byte blue = decodedBuffer[4];
+  if (currentState == Streaming)
+  {
+    byte index = decodedBuffer[1];
+    byte red = decodedBuffer[2];
+    byte green = decodedBuffer[3];
+    byte blue = decodedBuffer[4];
 
-  uint32_t color = strip.Color(strip.gamma8(red), strip.gamma8(green), strip.gamma8(blue));
+    uint32_t color = strip.Color(strip.gamma8(red), strip.gamma8(green), strip.gamma8(blue));
 
-  strip.setPixelColor(index, color);
-  strip.show();
+    strip.setPixelColor(index, color);
+    strip.show();
+  }
 }
 
 void handleWriteAllMessage(uint8_t decodedBuffer[])
 {
-  size_t count = (writeAllSize - 1) / 3;
-  for (size_t i = 0; i < count; i++)
+  if (currentState == Streaming)
   {
-    size_t p = i * 3;
-    byte red = decodedBuffer[p + 1];
-    byte green = decodedBuffer[p + 2];
-    byte blue = decodedBuffer[p + 3];
+    size_t count = (writeAllSize - 1) / 3;
+    for (size_t i = 0; i < count; i++)
+    {
+      size_t p = i * 3;
+      byte red = decodedBuffer[p + 1];
+      byte green = decodedBuffer[p + 2];
+      byte blue = decodedBuffer[p + 3];
 
-    uint32_t color = strip.Color(strip.gamma8(red), strip.gamma8(green), strip.gamma8(blue));
-    strip.setPixelColor(i, color);
+      uint32_t color = strip.Color(strip.gamma8(red), strip.gamma8(green), strip.gamma8(blue));
+      strip.setPixelColor(i, color);
+    }
+    strip.show();
   }
-  strip.show();
 }
 
 void handleHandshakeRequestMessage()
 {
+  currentState = Disconnected;
+
   uint8_t decodedBuffer[] = {handshakeResponse};
   size_t decodedBufferSize = sizeof(decodedBuffer) / sizeof(uint8_t);
 
@@ -158,10 +177,9 @@ void handleHandshakeRequestMessage()
   encode(decodedBuffer, decodedBufferSize, encodedBuffer);
 
   Serial.write(encodedBuffer, sizeof(encodedBuffer) / sizeof(uint8_t));
-}
 
-unsigned long time;
-unsigned long lastPrint = 0;
+  currentState = Streaming;
+}
 
 void sendMessage(uint8_t *message, size_t size)
 {
@@ -169,7 +187,7 @@ void sendMessage(uint8_t *message, size_t size)
   uint8_t encodedBuffer[encodedSize];
   encode(message, size, encodedBuffer);
   Serial.write(encodedBuffer, encodedSize);
-  Serial.write(0u);
+  Serial.write((uint8_t) 0u);
 }
 
 void sendMessage(uint8_t *message)
@@ -190,11 +208,6 @@ void sendMessagef(const char format[], ...)
 void loop()
 {
   time = millis();
-  if (time - lastPrint >= 1000)
-  {
-    // sendMessage((uint8_t *) "Ping", 4);
-    lastPrint = time;
-  }
   if (Serial.available())
   {
     uint8_t encodedBuffer[BUFFER_SIZE];
@@ -210,31 +223,50 @@ void loop()
       }
     }
 
-    // Serial.write(encodedBuffer, encodedSize);
-    // Serial.write(0u);
-
     uint8_t decodedBuffer[encodedSize];
     size_t decodedSize = decode(encodedBuffer, encodedSize, decodedBuffer);
 
     sendMessagef("Encoded size: %d", encodedSize);
     sendMessagef("Decoded size: %d", decodedSize);
 
+    bool handled = false;
     uint8_t header = decodedBuffer[0];
     if (header == setBrightness && decodedSize == setBrightnessSize)
     {
       handleSetBrightnessMessage(decodedBuffer);
-    } 
+      handled = true;
+    }
     else if (header == writeLED && decodedSize == writeLEDSize)
     {
       handleWriteLEDMessage(decodedBuffer);
+      handled = true;
     }
     else if (header == writeAll && decodedSize == writeAllSize)
     {
       handleWriteAllMessage(decodedBuffer);
+      handled = true;
     }
     else if (header == handshakeRequest && decodedSize == handshakeRequestSize)
     {
       handleHandshakeRequestMessage();
+      handled = true;
+    }
+
+    if (handled) {
+      lastMessage = time;
+    }
+
+    if (time - lastMessage > 30000) {
+      currentState = Disconnected;
+    }
+
+    if (currentState == Disconnected) {
+      if (time - lastMessage > 60000) {
+        if (currentBrightness > 0) {
+          strip.setBrightness(--currentBrightness);
+          strip.show();
+        }
+      }
     }
   }
 }
