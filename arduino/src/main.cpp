@@ -1,30 +1,24 @@
-// NEOPIXEL BEST PRACTICES for most reliable operation:
-// - Add 1000 uF CAPACITOR between NeoPixel strip's + and - connections.
-// - MINIMIZE WIRING LENGTH between microcontroller board and first pixel.
-// - NeoPixel strip's DATA-IN should pass through a 300-500 OHM RESISTOR.
-// - AVOID connecting NeoPixels on a LIVE CIRCUIT. If you must, ALWAYS
-//   connect GROUND (-) first, then +, then data.
-// - When using a 3.3V microcontroller with a 5V-powered NeoPixel strip,
-//   a LOGIC-LEVEL CONVERTER on the data line is STRONGLY RECOMMENDED.
-// (Skipping these may work OK on your workbench but can fail in the field)
 #include "main.h"
 #include "state.h"
+#include <PacketSerial.h>
 
+PacketSerial serial;
 unsigned long time;
 unsigned long lastPrint = 0;
 unsigned long lastMessage = 0;
-byte userDefinedBrightness = 255;
-byte currentBrightness = userDefinedBrightness;
-state currentState = Disconnected;
+uint8_t userDefinedBrightness = 255;
+uint8_t currentBrightness = userDefinedBrightness;
+state currentState = state::Disconnected;
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 void setup()
 {
-  Serial.begin(115200);
-  Serial.setTimeout(100);
+  serial.begin(115200);
+  serial.setPacketHandler(&handlePacket);
 
   strip.begin();
   strip.show();
+
   // Run a test sequence
   strip.setBrightness(255);
   strip.fill(strip.Color(strip.gamma8(255), strip.gamma8(0), strip.gamma8(0)), 0, 0);
@@ -40,88 +34,40 @@ void setup()
   strip.show();
 }
 
-size_t encode(const uint8_t *decodedBuffer,
-              size_t size,
-              uint8_t *encodedBuffer)
+void handlePacket(const uint8_t *decodedBuffer, size_t decodedSize)
 {
-  size_t read_index = 0;
-  size_t write_index = 1;
-  size_t code_index = 0;
-  uint8_t code = 1;
-
-  while (read_index < size)
+  bool handled = false;
+  uint8_t header = decodedBuffer[0];
+  if (header == setBrightness && decodedSize == setBrightnessSize)
   {
-    if (decodedBuffer[read_index] == 0)
-    {
-      encodedBuffer[code_index] = code;
-      code = 1;
-      code_index = write_index++;
-      read_index++;
-    }
-    else
-    {
-      encodedBuffer[write_index++] = decodedBuffer[read_index++];
-      code++;
-
-      if (code == 0xFF)
-      {
-        encodedBuffer[code_index] = code;
-        code = 1;
-        code_index = write_index++;
-      }
-    }
+    handleSetBrightnessMessage(decodedBuffer);
+    handled = true;
+  }
+  else if (header == writeLED && decodedSize == writeLEDSize)
+  {
+    handleWriteLEDMessage(decodedBuffer);
+    handled = true;
+  }
+  else if (header == writeAll && decodedSize == writeAllSize)
+  {
+    handleWriteAllMessage(decodedBuffer);
+    handled = true;
+  }
+  else if (header == handshakeRequest && decodedSize == handshakeRequestSize)
+  {
+    handleHandshakeRequestMessage();
+    handled = true;
   }
 
-  encodedBuffer[code_index] = code;
-
-  return write_index;
-}
-
-size_t decode(const uint8_t *encodedBuffer,
-              size_t size,
-              uint8_t *decodedBuffer)
-{
-  if (size == 0)
-    return 0;
-
-  size_t read_index = 0;
-  size_t write_index = 0;
-  uint8_t code = 0;
-  uint8_t i = 0;
-
-  while (read_index < size)
+  if (handled)
   {
-    code = encodedBuffer[read_index];
-
-    if (read_index + code > size && code != 1)
-    {
-      return 0;
-    }
-
-    read_index++;
-
-    for (i = 1; i < code; i++)
-    {
-      decodedBuffer[write_index++] = encodedBuffer[read_index++];
-    }
-
-    if (code != 0xFF && read_index != size)
-    {
-      decodedBuffer[write_index++] = '\0';
-    }
+    lastMessage = time;
   }
-
-  return write_index;
 }
 
-static size_t getEncodedBufferSize(size_t unencodedBufferSize)
+void handleSetBrightnessMessage(const uint8_t *decodedBuffer)
 {
-  return unencodedBufferSize + unencodedBufferSize / 254 + 1;
-}
-
-void handleSetBrightnessMessage(uint8_t decodedBuffer[])
-{
-  if (currentState == Streaming)
+  if (currentState == state::Streaming)
   {
     userDefinedBrightness = decodedBuffer[1];
     currentBrightness = userDefinedBrightness;
@@ -131,9 +77,9 @@ void handleSetBrightnessMessage(uint8_t decodedBuffer[])
   }
 }
 
-void handleWriteLEDMessage(uint8_t decodedBuffer[])
+void handleWriteLEDMessage(const uint8_t *decodedBuffer)
 {
-  if (currentState == Streaming)
+  if (currentState == state::Streaming)
   {
     byte index = decodedBuffer[1];
     byte red = decodedBuffer[2];
@@ -147,9 +93,9 @@ void handleWriteLEDMessage(uint8_t decodedBuffer[])
   }
 }
 
-void handleWriteAllMessage(uint8_t decodedBuffer[])
+void handleWriteAllMessage(const uint8_t *decodedBuffer)
 {
-  if (currentState == Streaming)
+  if (currentState == state::Streaming)
   {
     size_t count = (writeAllSize - 1) / 3;
     for (size_t i = 0; i < count; i++)
@@ -168,104 +114,41 @@ void handleWriteAllMessage(uint8_t decodedBuffer[])
 
 void handleHandshakeRequestMessage()
 {
-  currentState = Disconnected;
+  currentState = state::Disconnected;
 
   uint8_t decodedBuffer[] = {handshakeResponse};
-  size_t decodedBufferSize = sizeof(decodedBuffer) / sizeof(uint8_t);
+  serial.send(decodedBuffer, 1);
 
-  uint8_t encodedBuffer[getEncodedBufferSize(decodedBufferSize)];
-  encode(decodedBuffer, decodedBufferSize, encodedBuffer);
-
-  Serial.write(encodedBuffer, sizeof(encodedBuffer) / sizeof(uint8_t));
-
-  currentState = Streaming;
+  currentState = state::Streaming;
 }
 
-void sendMessage(uint8_t *message, size_t size)
+void sendMessage(const String &message)
 {
-  size_t encodedSize = getEncodedBufferSize(size);
-  uint8_t encodedBuffer[encodedSize];
-  encode(message, size, encodedBuffer);
-  Serial.write(encodedBuffer, encodedSize);
-  Serial.write((uint8_t) 0u);
-}
-
-void sendMessage(uint8_t *message)
-{
-  sendMessage(message, strlen((char *)message));
-}
-
-void sendMessagef(const char format[], ...)
-{
-  char buffer[50];
-  va_list ap;
-  va_start(ap, format);
-  vsprintf(buffer, format, ap);
-  va_end(ap);
-  sendMessage((uint8_t *)buffer);
+  // TODO need to prefix with "print"
+  auto bufferSize = message.length() + 1;
+  uint8_t buffer[bufferSize] = {print};
+  memcpy(&buffer + 1, message.c_str(), message.length());
+  serial.send(buffer, bufferSize);
 }
 
 void loop()
 {
   time = millis();
-  if (Serial.available())
+  serial.update();
+
+  if (time - lastMessage > 30000)
   {
-    uint8_t encodedBuffer[BUFFER_SIZE];
-    size_t encodedSize = 0;
-    while (encodedSize < BUFFER_SIZE)
+    currentState = state::Disconnected;
+  }
+
+  if (currentState == state::Disconnected)
+  {
+    if (time - lastMessage > 60000)
     {
-      if (Serial.available())
+      if (currentBrightness > 0)
       {
-        uint8_t b = Serial.read();
-        if (b == 0)
-          break;
-        encodedBuffer[encodedSize++] = b;
-      }
-    }
-
-    uint8_t decodedBuffer[encodedSize];
-    size_t decodedSize = decode(encodedBuffer, encodedSize, decodedBuffer);
-
-    sendMessagef("Encoded size: %d", encodedSize);
-    sendMessagef("Decoded size: %d", decodedSize);
-
-    bool handled = false;
-    uint8_t header = decodedBuffer[0];
-    if (header == setBrightness && decodedSize == setBrightnessSize)
-    {
-      handleSetBrightnessMessage(decodedBuffer);
-      handled = true;
-    }
-    else if (header == writeLED && decodedSize == writeLEDSize)
-    {
-      handleWriteLEDMessage(decodedBuffer);
-      handled = true;
-    }
-    else if (header == writeAll && decodedSize == writeAllSize)
-    {
-      handleWriteAllMessage(decodedBuffer);
-      handled = true;
-    }
-    else if (header == handshakeRequest && decodedSize == handshakeRequestSize)
-    {
-      handleHandshakeRequestMessage();
-      handled = true;
-    }
-
-    if (handled) {
-      lastMessage = time;
-    }
-
-    if (time - lastMessage > 30000) {
-      currentState = Disconnected;
-    }
-
-    if (currentState == Disconnected) {
-      if (time - lastMessage > 60000) {
-        if (currentBrightness > 0) {
-          strip.setBrightness(--currentBrightness);
-          strip.show();
-        }
+        strip.setBrightness(--currentBrightness);
+        strip.show();
       }
     }
   }
