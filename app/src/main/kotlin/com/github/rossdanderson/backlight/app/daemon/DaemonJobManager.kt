@@ -5,6 +5,7 @@ package com.github.rossdanderson.backlight.app.daemon
 import com.github.rossdanderson.backlight.app.config.Config
 import com.github.rossdanderson.backlight.app.config.ConfigService
 import com.github.rossdanderson.backlight.app.led.LEDService
+import com.github.rossdanderson.backlight.app.messages.PrintMessage
 import com.github.rossdanderson.backlight.app.messages.SetBrightnessMessage
 import com.github.rossdanderson.backlight.app.messages.WriteAllMessage
 import com.github.rossdanderson.backlight.app.serial.ConnectResult
@@ -13,6 +14,7 @@ import com.github.rossdanderson.backlight.app.serial.ISerialService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import mu.KotlinLogging
 import kotlin.time.ExperimentalTime
 
 @ExperimentalTime
@@ -22,6 +24,8 @@ class DaemonJobManager(
     private val serialService: ISerialService,
     daemonScope: CoroutineScope
 ) : CoroutineScope by daemonScope {
+
+    private val logger = KotlinLogging.logger {}
 
     init {
         // Bind the led flow to serial out
@@ -35,6 +39,13 @@ class DaemonJobManager(
         launch {
             configService.configFlow.map { it.brightness }
                 .collect { serialService.send(SetBrightnessMessage((it / 10 * 255).toInt().toUByte())) }
+        }
+
+        // Log print messages from the serial connection
+        launch {
+            serialService.receiveFlow
+                .filterIsInstance<PrintMessage>()
+                .collect { logger.info { it.contents } }
         }
 
         // On startup, attempt to connect to the last known port

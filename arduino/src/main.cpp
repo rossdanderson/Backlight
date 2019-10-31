@@ -116,18 +116,18 @@ void handleHandshakeRequestMessage()
 {
   currentState = state::Disconnected;
 
-  uint8_t decodedBuffer[] = {handshakeResponse};
-  serial.send(decodedBuffer, 1);
+  uint8_t decodedBuffer[] = {handshakeResponse, LED_COUNT};
+  serial.send(decodedBuffer, 2);
 
   currentState = state::Streaming;
+  currentBrightness = userDefinedBrightness;
 }
 
 void sendMessage(const String &message)
 {
-  // TODO need to prefix with "print"
   auto bufferSize = message.length() + 1;
   uint8_t buffer[bufferSize] = {print};
-  memcpy(&buffer + 1, message.c_str(), message.length());
+  memcpy(buffer + 1, message.c_str(), message.length());
   serial.send(buffer, bufferSize);
 }
 

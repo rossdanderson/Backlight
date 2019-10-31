@@ -49,12 +49,16 @@ class LEDService(
                     prevImageWidth = image.width
                     prevImageHeight = image.height
 
-                    val sampleHeight = (image.height * 0.1).toInt()
-                    val sampleWidth = (image.width.toDouble() / ledCount.toDouble()).toInt()
+                    val sampleWidthSteps = minOf(ledCount, image.width)
+
+                    val sampleHeight = (image.height * 0.15).toInt()
+                    val sampleWidth = image.width.toDouble() / sampleWidthSteps.toDouble()
 
                     screenSections = (0 until ledCount).map {
+                        val left = (it * sampleWidth).toInt()
+                        val right = minOf(image.width, ((it + 1) * sampleWidth).toInt())
                         IntRange2D(
-                            xRange = offsetIntRange(it * sampleWidth, sampleWidth),
+                            xRange = offsetIntRange(left, right - left),
                             yRange = offsetIntRange(image.height - (image.height * 0.25).toInt(), sampleHeight)
                         )
                     }

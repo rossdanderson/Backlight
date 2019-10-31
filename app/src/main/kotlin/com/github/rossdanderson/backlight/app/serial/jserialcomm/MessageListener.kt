@@ -8,21 +8,17 @@ import com.fazecast.jSerialComm.SerialPortMessageListener
 import com.github.rossdanderson.backlight.app.cobsDecode
 import com.github.rossdanderson.backlight.app.messages.Message
 import kotlinx.coroutines.channels.SendChannel
-import java.nio.charset.Charset
 
 class MessageListener(
     private val sendChannel: SendChannel<Message>
 ) : SerialPortMessageListener {
     override fun delimiterIndicatesEndOfMessage(): Boolean = true
 
-    override fun getMessageDelimiter(): ByteArray =
-        "\n".toByteArray(Charset.forName("ASCII"))
+    override fun getMessageDelimiter(): ByteArray = ByteArray(0)
 
     override fun serialEvent(event: SerialPortEvent) {
         val byteArray = event.receivedData
-        println(byteArray!!.contentToString())
-        println(byteArray.cobsDecode().contentToString())
-        sendChannel.offer(Message.from(byteArray.cobsDecode().toUByteArray()))
+        runCatching { sendChannel.offer(Message.from(byteArray.cobsDecode().toUByteArray())) }
     }
 
     override fun getListeningEvents(): Int = LISTENING_EVENT_DATA_RECEIVED

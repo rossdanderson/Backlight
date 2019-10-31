@@ -57,7 +57,7 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
                         SerialPort.getCommPorts().singleOrNull { it.descriptivePortName == message.descriptivePortName }
                             ?.apply {
                                 baudRate = 115200
-                                setComPortTimeouts(SerialPort.TIMEOUT_WRITE_BLOCKING, 1000, 1000)
+                                addDataListener(MessageListener(receiveFlowChannel))
                             }
 
                     if (attemptSerialPort != null) {
@@ -66,14 +66,14 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
 
                             logger.info { "Port opened to ${message.descriptivePortName}" }
 
-                            attemptSerialPort.addDataListener(MessageListener(receiveFlowChannel))
-
                             val deferredHandshakeResponse =
                                 async { receiveFlow.filterIsInstance<HandshakeResponseMessage>().first() }
+
+
+
                             attemptSerialPort.writeMessage(HandshakeRequestMessage)
 
-                            val handshakeResponse = withTimeoutOrNull(1000) { deferredHandshakeResponse.await() } ?: HandshakeResponseMessage(
-                                ubyteArrayOf(Header.HANDSHAKE_RESPONSE.toUByte(), 60u))
+                            val handshakeResponse = withTimeoutOrNull(1000) { deferredHandshakeResponse.await() }
 
                             if (handshakeResponse != null) {
                                 logger.info { "Connected to ${message.descriptivePortName}" }
@@ -89,6 +89,8 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
                                 ConnectResult.Success
                             } else {
                                 logger.warn { "Cannot connect to ${message.descriptivePortName} - handshake failed" }
+                                attemptSerialPort.removeDataListener()
+                                attemptSerialPort.closePort()
                                 connectionStateChannel.send(Disconnected)
                                 ConnectResult.Failure("Handshake failed")
                             }
