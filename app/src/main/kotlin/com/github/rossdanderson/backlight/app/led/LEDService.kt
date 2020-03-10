@@ -14,6 +14,7 @@ import com.github.rossdanderson.backlight.app.serial.ConnectionState
 import com.github.rossdanderson.backlight.app.serial.ISerialService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import java.lang.Double.max
 import kotlin.time.ExperimentalTime
 
 @ExperimentalTime
@@ -51,7 +52,7 @@ class LEDService(
 
                     val sampleWidthSteps = minOf(ledCount, image.width)
 
-                    val sampleHeight = (image.height * 0.15).toInt()
+                    val sampleHeight = (max(image.height * 0.10, 1.0)).toInt()
                     val sampleWidth = image.width.toDouble() / sampleWidthSteps.toDouble()
 
                     screenSections = (0 until ledCount).map {
@@ -64,7 +65,7 @@ class LEDService(
                     }
                 }
 
-                screenSections!!
+                val toList: List<UColor> = screenSections!!
                     .map { intRange2D ->
                         var red = 0
                         var green = 0
@@ -93,6 +94,7 @@ class LEDService(
                         UColor(redAvg, greenAvg, blueAvg)
                     }
                     .toList()
+                toList
             }
         }
         .distinctUntilChanged()

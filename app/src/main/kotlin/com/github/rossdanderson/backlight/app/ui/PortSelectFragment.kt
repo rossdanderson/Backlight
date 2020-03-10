@@ -1,9 +1,12 @@
+@file:Suppress("EXPERIMENTAL_API_USAGE")
+
 package com.github.rossdanderson.backlight.app.ui
 
 import com.github.rossdanderson.backlight.app.ui.base.BaseFragment
 import javafx.geometry.Pos.CENTER
 import javafx.scene.control.Alert
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import tornadofx.*
 import kotlin.time.ExperimentalTime
@@ -21,9 +24,9 @@ class PortSelectFragment : BaseFragment("Port Select") {
                 label("Select a port to use:")
 
                 listview<String> {
-                    launch { vm.ports.collect { items = it.observable() } }
+                    vm.ports.onEach { items = it.asObservable() }.launchIn(coroutineScope)
                     onUserSelect {
-                        launch { vm.connectCommand(it) }
+                        coroutineScope.launch { vm.connectCommand(it) }
                     }
                 }
             }
@@ -37,10 +40,9 @@ class PortSelectFragment : BaseFragment("Port Select") {
         }
 
     override fun onDock() {
-        launch {
             vm.connectionFailedAlertEventFlow
-                .collect { alert(Alert.AlertType.WARNING, "Unable to connect to ${it.portDescriptor}", it.reason) }
-        }
-        launch { vm.closeEventFlow.collect { close() } }
+                .onEach { alert(Alert.AlertType.WARNING, "Unable to connect to ${it.portDescriptor}", it.reason) }
+                .launchIn(coroutineScope)
+         vm.closeEventFlow.onEach { close() }.launchIn(coroutineScope)
     }
 }

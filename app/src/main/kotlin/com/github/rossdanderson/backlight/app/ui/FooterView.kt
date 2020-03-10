@@ -3,8 +3,8 @@
 package com.github.rossdanderson.backlight.app.ui
 
 import com.github.rossdanderson.backlight.app.ui.base.BaseView
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import tornadofx.hbox
 import tornadofx.text
 import tornadofx.vbox
@@ -16,7 +16,7 @@ class FooterView : BaseView() {
     override val root = vbox {
         hbox(5) {
             text {
-                launch { vm.connectionStatusFlow.collect { text = it } }
+                 vm.connectionStatusFlow.onEach { text = it }.launchIn(coroutineScope)
             }
         }
     }

@@ -3,7 +3,8 @@
 package com.github.rossdanderson.backlight.app.ui
 
 import com.github.rossdanderson.backlight.app.ui.base.BaseView
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import tornadofx.*
 import kotlin.time.ExperimentalTime
@@ -17,11 +18,11 @@ class ControlView : BaseView() {
         val brightnessLabel = label("Brightness:")
         hbox {
             val brightnessSlider = slider(0.0, 10.0) {
-                launch { controlViewModel.brightnessFlow.collect { value = it } }
-                valueProperty().onChange { launch { controlViewModel.updateBrightness(it) } }
+                controlViewModel.brightnessFlow.onEach { value = it }.launchIn(coroutineScope)
+                valueProperty().onChange { coroutineScope.launch { controlViewModel.updateBrightness(it) } }
             }
             button("Reset") {
-                setOnMouseClicked { launch { controlViewModel.updateBrightness(1.0) } }
+                setOnMouseClicked { coroutineScope.launch { controlViewModel.updateBrightness(1.0) } }
             }
             brightnessLabel.labelFor = brightnessSlider
         }
@@ -29,11 +30,11 @@ class ControlView : BaseView() {
         val sampleStepLabel = label("Sample step:")
         hbox {
             val sampleStepSlider = slider(1, 50) {
-                launch { controlViewModel.sampleStepFlow.collect { value = it.toDouble() } }
-                valueProperty().onChange { launch { controlViewModel.updateSampleStep(it.toInt()) } }
+                controlViewModel.sampleStepFlow.onEach { value = it.toDouble() }.launchIn(coroutineScope)
+                valueProperty().onChange { coroutineScope.launch { controlViewModel.updateSampleStep(it.toInt()) } }
             }
             button("Reset") {
-                setOnMouseClicked { launch { controlViewModel.updateSampleStep(1) } }
+                setOnMouseClicked { coroutineScope.launch { controlViewModel.updateSampleStep(1) } }
             }
             sampleStepLabel.labelFor = sampleStepSlider
         }
@@ -41,11 +42,11 @@ class ControlView : BaseView() {
         val saturationLabel = label("Saturation:")
         hbox {
             val saturationSlider = slider(0.0, 10.0) {
-                launch { controlViewModel.saturationFlow.collect { value = it } }
-                valueProperty().onChange { launch { controlViewModel.updateSaturation(it) } }
+                controlViewModel.saturationFlow.onEach { value = it }.launchIn(coroutineScope)
+                valueProperty().onChange { coroutineScope.launch { controlViewModel.updateSaturation(it) } }
             }
             button("Reset") {
-                setOnMouseClicked { launch { controlViewModel.updateSaturation(1.0) } }
+                setOnMouseClicked { coroutineScope.launch { controlViewModel.updateSaturation(1.0) } }
             }
             saturationLabel.labelFor = saturationSlider
         }
@@ -53,11 +54,11 @@ class ControlView : BaseView() {
         val contrastLabel = label("Contrast:")
         hbox {
             val contrastSlider = slider(0.0, 100.0) {
-                launch { controlViewModel.contrastFlow.collect { value = it } }
-                valueProperty().onChange { launch { controlViewModel.updateContrast(it) } }
+                controlViewModel.contrastFlow.onEach { value = it }.launchIn(coroutineScope)
+                valueProperty().onChange { coroutineScope.launch { controlViewModel.updateContrast(it) } }
             }
             button("Reset") {
-                setOnMouseClicked { launch { controlViewModel.updateContrast(1.0) } }
+                setOnMouseClicked { coroutineScope.launch { controlViewModel.updateContrast(1.0) } }
             }
             contrastLabel.labelFor = contrastSlider
         }

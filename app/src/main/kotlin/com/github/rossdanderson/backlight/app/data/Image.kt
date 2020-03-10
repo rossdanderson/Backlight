@@ -7,7 +7,7 @@ import java.awt.image.DataBufferInt
 data class Image(
     val height: Int,
     val width: Int,
-    private val pixels: IntArray
+    val pixels: IntArray
 ) {
     constructor(image: BufferedImage) : this(
         image.height,
@@ -23,6 +23,12 @@ data class Image(
 
     fun map(action: (Color) -> Color) {
         (pixels.indices).forEach { pixels[it] = action(Color(pixels[it])).rgb }
+    }
+
+    fun mapImage(action: (Color) -> Color): Image {
+        val copy = pixels.copyOf()
+        (copy.indices).forEach { copy[it] = action(Color(copy[it])).rgb }
+        return copy(pixels = copy)
     }
 
     override fun equals(other: Any?): Boolean {

@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Unmocked - DXGI" type="JetRunConfigurationType" factoryName="Kotlin">
     <module name="app.main" />
-    <option name="VM_PARAMETERS" value="-ea -Dlog4j.configurationFile=config/log4j2.xml" />
+    <option name="VM_PARAMETERS" value="-ea -Dlog4j.configurationFile=config/log4j2.xml -Djavafx.animation.fullspeed=true" />
     <option name="PROGRAM_PARAMETERS" value="" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
     <option name="ALTERNATIVE_JRE_PATH" />

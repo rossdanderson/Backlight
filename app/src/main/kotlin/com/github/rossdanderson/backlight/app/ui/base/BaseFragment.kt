@@ -9,11 +9,11 @@ import tornadofx.Fragment
 abstract class BaseFragment(
     title: String? = null,
     icon: Node? = null,
-    scope: CoroutineScope = MainScope()
-) : Fragment(title, icon), CoroutineScope by scope {
+    val coroutineScope: CoroutineScope = MainScope()
+) : Fragment(title, icon) {
 
     override fun onUndock() {
         super.onUndock()
-        cancel()
+        coroutineScope.cancel()
     }
 }

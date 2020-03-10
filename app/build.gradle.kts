@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    val kotlinVersion = "1.3.50"
+    val kotlinVersion = "1.3.70"
 
     idea
     java
@@ -23,9 +23,9 @@ repositories {
     maven("https://oss.sonatype.org/content/repositories/snapshots")
 }
 
-val kotlinSerializationVersion = "0.13.0"
-val kotlinCoroutinesVersion = "1.3.2"
-val javaFXVersion = "12.0.1"
+val kotlinSerializationVersion = "0.20.0"
+val kotlinCoroutinesVersion = "1.3.3"
+val javaFXVersion = "13"
 val koinVersion = "2.0.1"
 val jSerialCommVersion = "2.5.2"
 val kotlinLoggingVersion = "1.7.6"
@@ -53,8 +53,8 @@ application {
 }
 
 java {
-    targetCompatibility = JavaVersion.VERSION_12
-    sourceCompatibility = JavaVersion.VERSION_12
+    targetCompatibility = JavaVersion.VERSION_13
+    sourceCompatibility = JavaVersion.VERSION_13
 }
 
 javafx {

@@ -14,7 +14,6 @@ import com.github.rossdanderson.backlight.app.serial.mock.MockSerialService
 import com.github.rossdanderson.backlight.app.ui.MainView
 import javafx.application.Platform
 import javafx.stage.Stage
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.launchIn
@@ -36,7 +35,9 @@ import kotlin.system.exitProcess
 import kotlin.time.ExperimentalTime
 
 @ExperimentalTime
-class BacklightApp : App(MainView::class), CoroutineScope by MainScope() {
+class BacklightApp : App(MainView::class) {
+
+    private val coroutineScope = MainScope()
 
     object KoinKotlinLogger : Logger() {
         override fun log(level: Level, msg: MESSAGE) {
@@ -87,7 +88,7 @@ class BacklightApp : App(MainView::class), CoroutineScope by MainScope() {
 
     override fun start(stage: Stage) {
         super.start(stage)
-        stage.iconifiedProperty().asFlow().onEach { applicationState.setMinimised(it) }.launchIn(this)
+        stage.iconifiedProperty().asFlow().onEach { applicationState.setMinimised(it) }.launchIn(coroutineScope)
     }
 
     override fun stop() {

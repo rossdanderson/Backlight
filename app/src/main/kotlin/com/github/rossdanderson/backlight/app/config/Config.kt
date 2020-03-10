@@ -9,7 +9,7 @@ import kotlin.time.ExperimentalTime
 @Serializable
 data class Config(
     val defaultPort: String? = null,
-    val minDelayMillis: Long = 10,
+    val minDelayMillis: Long = 5,
     val saturationAlpha: Double = 1.0,
     val contrast: Double = 1.0,
     val brightness: Double = 5.0,
