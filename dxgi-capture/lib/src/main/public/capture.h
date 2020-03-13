@@ -1,5 +1,5 @@
-#ifndef DXGICAPTURE_CAPTURE_H
-#define DXGICAPTURE_CAPTURE_H
+#ifndef DXGI_CAPTURE_CAPTURE_H
+#define DXGI_CAPTURE_CAPTURE_H
 
 #include <memory>
 #include <ostream>
@@ -81,4 +81,4 @@ private:
     CComPtr<IDXGISurface1> acquireNextFrame();
 };
 
-#endif //DXGICAPTURE_CAPTURE_H
+#endif //DXGI_CAPTURE_CAPTURE_H

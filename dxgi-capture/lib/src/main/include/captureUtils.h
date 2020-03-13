@@ -1,9 +1,5 @@
-//
-// Created by rossd on 29/08/2019.
-//
-
-#ifndef DXGICAPTURE_CAPTUREUTILS_H
-#define DXGICAPTURE_CAPTUREUTILS_H
+#ifndef DXGI_CAPTURE_CAPTUREUTILS_H
+#define DXGI_CAPTURE_CAPTUREUTILS_H
 
 #define SUCCESS_OR_THROW(message, hresult) captureUtils::checkHResult(message, hresult, __FILE__, __LINE__)
 
@@ -18,4 +14,4 @@ namespace captureUtils {
     }
 }
 
-#endif //DXGICAPTURE_CAPTUREUTILS_H
+#endif //DXGI_CAPTURE_CAPTUREUTILS_H
