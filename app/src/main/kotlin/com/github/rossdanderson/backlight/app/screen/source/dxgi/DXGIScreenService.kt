@@ -9,8 +9,6 @@ import com.github.rossdanderson.backlight.app.flatMapLatest
 import com.github.rossdanderson.backlight.app.logDurations
 import com.github.rossdanderson.backlight.app.screen.IScreenService
 import com.github.rossdanderson.backlight.app.screen.source.dxgi.generated.Capture
-import com.github.rossdanderson.backlight.app.screen.source.dxgi.generated.CaptureResult.*
-import com.github.rossdanderson.backlight.app.screen.source.dxgi.generated.Logger
 import com.github.rossdanderson.backlight.app.share
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -20,6 +18,7 @@ import java.awt.Color
 import java.awt.image.BufferedImage
 import java.awt.image.BufferedImage.TYPE_INT_RGB
 import java.nio.file.Paths
+import kotlin.math.abs
 import kotlin.time.*
 
 @ExperimentalTime
@@ -32,13 +31,17 @@ class DXGIScreenService(
 
     override val screenFlow: Flow<BufferedImage> =
         flow<BufferedImage> {
-            val capture = Capture(nativeLogger)
+            val capture = Capture()
             val captureLogger = logger.logDurations("Captures", 100)
             emitAll(
                 combine(sampleStepFlow, minDelayMillisFlow) { sampleStep, minDelayMillis ->
                     flow {
                         initLoop@ while (true) {
-                            val arraySize = capture.init(sampleStep)
+                            val bufferSizeArray = LongArray(1)
+                            if (capture.init(sampleStep, bufferSizeArray) != 0) {
+                                continue@initLoop
+                            }
+                            val arraySize = bufferSizeArray[0]
                             if (arraySize == 0L) {
                                 val duration = 1.seconds
                                 logger.warn { "Unable to initialise, retrying in $duration" }
@@ -48,8 +51,9 @@ class DXGIScreenService(
                             logger.info { "Using buffer array size: $arraySize" }
 
                             val dimensions = capture.dimensions
-                            val width = dimensions.width()
-                            val height = dimensions.height()
+
+                            val width = abs(dimensions.point1.x - dimensions.point2.x)
+                            val height = abs(dimensions.point1.y - dimensions.point2.y)
 
                             captureLoop@ while (true) {
                                 val startTime = System.currentTimeMillis()
@@ -60,7 +64,7 @@ class DXGIScreenService(
                                 captureLogger(captureDuration)
 
                                 when (captureResult) {
-                                    Success -> {
+                                    0 -> {
                                         val bufferedImage = BufferedImage(width, height, TYPE_INT_RGB)
                                         Image(bufferedImage).apply {
                                             (0 until height).forEach { y ->
@@ -81,9 +85,7 @@ class DXGIScreenService(
                                             emit(bufferedImage)
                                         }
                                     }
-                                    FailureBufferTooSmall -> continue@initLoop
-                                    FailureInitRequired -> continue@initLoop
-                                    FailureNotImplemented -> TODO("Not currently implemented")
+                                    else -> TODO("Not currently implemented")
                                 }
 
                                 val delayDuration =
@@ -106,20 +108,5 @@ class DXGIScreenService(
         }
 
         private val logger = KotlinLogging.logger { }
-
-        // Must not allow this to be GC'd - thus held as static instance.
-        private val nativeLogger = object : Logger() {
-            override fun info(message: String) {
-                logger.info(message)
-            }
-
-            override fun warn(message: String) {
-                logger.warn(message)
-            }
-
-            override fun error(message: String) {
-                logger.error(message)
-            }
-        }
     }
 }

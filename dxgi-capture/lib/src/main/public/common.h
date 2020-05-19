@@ -15,10 +15,6 @@ struct rectangle {
     struct point point2;
 };
 
-long rectangleWidth(struct rectangle *rectangle);
-
-long rectangleHeight(struct rectangle *rectangle);
-
 #ifdef __cplusplus
 }
 #endif

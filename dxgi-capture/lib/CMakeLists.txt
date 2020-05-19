@@ -1,7 +1,6 @@
 add_library(dxgi-capture-lib
         src/main/cpp/capture.cpp
-        src/main/cpp/wrapper.cpp
-        src/main/cpp/common.cpp)
+        )
 
 target_include_directories(dxgi-capture-lib PUBLIC src/main/public)
 target_include_directories(dxgi-capture-lib PRIVATE src/main/include)

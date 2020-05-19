@@ -4,6 +4,7 @@
 #include <memory>
 #include <ostream>
 #include <utility>
+#include <Windows.h>
 #include <dxgi1_2.h>
 #include <atlbase.h>
 #include <d3d11.h>

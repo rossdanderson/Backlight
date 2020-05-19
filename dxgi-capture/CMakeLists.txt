@@ -7,4 +7,5 @@ set(CMAKE_INSTALL_PREFIX ../../)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_subdirectory(lib)
+add_subdirectory(cwrapper)
 add_subdirectory(java)

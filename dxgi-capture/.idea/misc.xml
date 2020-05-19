@@ -1,24 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$" />
-  <component name="CidrRootsConfiguration">
-    <sourceRoots>
-      <file path="$PROJECT_DIR$/java/src/main/swig" />
-      <file path="$PROJECT_DIR$/jni-lib/src/main/cpp" />
-      <file path="$PROJECT_DIR$/jni-lib/src/main/include" />
-      <file path="$PROJECT_DIR$/jni-lib/src/main/public" />
-      <file path="$PROJECT_DIR$/lib/src/main/cpp" />
-      <file path="$PROJECT_DIR$/lib/src/main/include" />
-      <file path="$PROJECT_DIR$/lib/src/main/public" />
-    </sourceRoots>
-    <excludeRoots>
-      <file path="$PROJECT_DIR$/cmake-build-release" />
-    </excludeRoots>
-  </component>
   <component name="JavaScriptSettings">
     <option name="languageLevel" value="ES6" />
-  </component>
-  <component name="ProjectPlainTextFileTypeManager">
-    <file url="file://$PROJECT_DIR$/java/src/main/swig/Capture.i" />
   </component>
 </project>
