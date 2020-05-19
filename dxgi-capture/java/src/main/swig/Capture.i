@@ -3,30 +3,26 @@
 %{
 #include <sstream>
 #include <string>
-#include "logger.h"
 #include "capture.h"
 %}
 
 %include "typemaps.i"
+%include "windows.i"
 %include "std_string.i"
 %include "std_wstring.i"
 %include "std_shared_ptr.i"
 
-%shared_ptr(logger);
-%feature("director") logger;
-
 %ignore operator<<;
 
+%apply long long * INOUT { size_t * };
 %apply signed char * INOUT { unsigned char * };
 
 %rename (Capture) capture;
 %rename (CaptureResult) captureResult;
 %rename (Point) point;
 %rename (Rectangle) rectangle;
-%rename (Logger) logger;
 
-%include "logger.h"
-
+%include "common.h"
 %include "capture.h"
 
 %extend rectangle {

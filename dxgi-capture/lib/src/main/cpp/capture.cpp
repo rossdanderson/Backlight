@@ -1,206 +1,180 @@
 #include "../public/capture.h"
-#include "../include/captureUtils.h"
-#include <sstream>
 #include <iostream>
+#include <sstream>
 #include <cmath>
 
 using namespace std;
 
-capture::capture(std::shared_ptr<class logger> logger) {
-    this->logger = std::move(logger);
-}
+HRESULT capture::init(long sampleStep, size_t *outBufferSize) {
+    reset();
 
-size_t capture::init(long sampleStep) {
+    MONITORINFO monitorInfo;
+    monitorInfo.cbSize = sizeof(MONITORINFO);
 
-    try {
-        reset();
+    CComPtr<IDXGIFactory1> dxgiFactory1;
 
-        MONITORINFO monitorInfo;
-        monitorInfo.cbSize = sizeof(MONITORINFO);
+    HRESULT hr = CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void **>(&dxgiFactory1));
+    if (FAILED(hr)) {
+        printf("Unable to create DXGI Factory");
+        return hr;
+    }
 
-        CComPtr<IDXGIFactory1> dxgiFactory1;
-        SUCCESS_OR_THROW("Unable to create DXGI Factory",
-                         CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void **>(&dxgiFactory1)));
-
-        CComPtr<IDXGIAdapter1> adapter1 = nullptr;
-        CComPtr<IDXGIOutput> output = nullptr;
-        auto i = 0;
-        CComPtr<IDXGIAdapter1> testAdapter1 = nullptr;
-        while (output == nullptr && dxgiFactory1->EnumAdapters1(i, &testAdapter1) != DXGI_ERROR_NOT_FOUND) {
-            DXGI_ADAPTER_DESC1 adapterDesc;
-            SUCCESS_OR_THROW("Unable to access adapter description", testAdapter1->GetDesc1(&adapterDesc));
-
-            auto j = 0;
-            CComPtr<IDXGIOutput> testOutput = nullptr;
-            while (output == nullptr && testAdapter1->EnumOutputs(j, &testOutput) != DXGI_ERROR_NOT_FOUND) {
-                DXGI_OUTPUT_DESC outputDesc;
-                SUCCESS_OR_THROW("Unable to access output description", testOutput->GetDesc(&outputDesc));
-
-                GetMonitorInfo(outputDesc.Monitor, &monitorInfo);
-                auto isPrimary = (monitorInfo.dwFlags & MONITORINFOF_PRIMARY) != 0; // NOLINT(hicpp-signed-bitwise)
-
-                if (isPrimary && outputDesc.AttachedToDesktop) {
-                    adapter1 = testAdapter1;
-                    output = testOutput;
-                }
-                testOutput.Release();
-                ++j;
-            }
-
-            testAdapter1.Release();
-            ++i;
+    CComPtr<IDXGIAdapter1> adapter1 = nullptr;
+    CComPtr<IDXGIOutput> output = nullptr;
+    auto i = 0;
+    CComPtr<IDXGIAdapter1> testAdapter1 = nullptr;
+    while (output == nullptr && dxgiFactory1->EnumAdapters1(i, &testAdapter1) != DXGI_ERROR_NOT_FOUND) {
+        DXGI_ADAPTER_DESC1 adapterDesc;
+        hr = testAdapter1->GetDesc1(&adapterDesc);
+        if (FAILED(hr)) {
+            std::cout << "Unable to access adapter description";
+            return hr;
         }
 
-        if (adapter1 == nullptr || output == nullptr) throw invalid_argument("No adapter found");
+        auto j = 0;
+        CComPtr<IDXGIOutput> testOutput = nullptr;
+        while (output == nullptr && testAdapter1->EnumOutputs(j, &testOutput) != DXGI_ERROR_NOT_FOUND) {
+            DXGI_OUTPUT_DESC outputDesc;
+            hr = testOutput->GetDesc(&outputDesc);
+            if (FAILED(hr)) {
+                std::cout << "Unable to access output description";
+                return hr;
+            }
 
-        DXGI_ADAPTER_DESC1 adapterDesc;
-        SUCCESS_OR_THROW("Unable to access adapter description", adapter1->GetDesc1(&adapterDesc));
+            GetMonitorInfo(outputDesc.Monitor, &monitorInfo);
+            auto isPrimary = (monitorInfo.dwFlags & MONITORINFOF_PRIMARY) != 0; // NOLINT(hicpp-signed-bitwise)
 
-        DXGI_OUTPUT_DESC outputDesc;
-        SUCCESS_OR_THROW("Unable to access output description", output->GetDesc(&outputDesc));
+            if (isPrimary && outputDesc.AttachedToDesktop) {
+                adapter1 = testAdapter1;
+                output = testOutput;
+            }
+            testOutput.Release();
+            ++j;
+        }
 
-        wostringstream infoStream;
-        RECT &desktopCoordinates = outputDesc.DesktopCoordinates;
-        infoStream << "Adapter output found:"
-                   << " Description='" << adapterDesc.Description
-                   << "', DeviceId='" << adapterDesc.DeviceId
-                   << "', DeviceName='" << outputDesc.DeviceName
-                   << "', Rotation='" << outputDesc.Rotation
-                   << "', DesktopCoordinates='(" << desktopCoordinates.left
-                   << "," << desktopCoordinates.top
-                   << "),(" << desktopCoordinates.right
-                   << "," << desktopCoordinates.bottom
-                   << ")'";
-        logger->info(infoStream.str());
-
-        CComPtr<ID3D11Device> device;
-        CComPtr<ID3D11DeviceContext> deviceContext;
-        auto featureLevel = D3D_FEATURE_LEVEL_9_1;
-        SUCCESS_OR_THROW(
-                "Unable to create D3D device",
-                D3D11CreateDevice(
-                        adapter1,
-                        D3D_DRIVER_TYPE_UNKNOWN,
-                        nullptr,
-                        0,
-                        nullptr,
-                        0,
-                        D3D11_SDK_VERSION,
-                        &device,
-                        &featureLevel,
-                        &deviceContext
-                )
-        );
-
-        CComQIPtr<IDXGIOutput1> output1(output);
-        if (output1 == nullptr) throw invalid_argument("output does not implement IDXGIOutput1");
-
-        CComQIPtr<IDXGIDevice1> device1(device);
-        if (device1 == nullptr) throw invalid_argument("device does not implement IDXGIDevice1");
-
-        CComPtr<IDXGIOutputDuplication> outputDuplication;
-        SUCCESS_OR_THROW(
-                "Unable to duplicate output",
-                output1->DuplicateOutput(
-                        device1,
-                        &outputDuplication
-                )
-        );
-
-        this->sampleStep = sampleStep;
-        this->output1 = output1;
-        this->device = device;
-        this->deviceContext = deviceContext;
-        this->outputDuplication = outputDuplication;
-        CopyRect(&dimensions, &desktopCoordinates);
-        initialised = true;
-
-        width = (desktopCoordinates.right - desktopCoordinates.left) / sampleStep;
-        height = (desktopCoordinates.bottom - desktopCoordinates.top) / sampleStep;
-        requiredBufferSize = width * height * 4;
-
-        return requiredBufferSize;
-
-    } catch (hresultException &e) {
-        wostringstream errorStream;
-        errorStream << e.what();
-        logger->error(errorStream.str());
-        return 0;
+        testAdapter1.Release();
+        ++i;
     }
+
+    if (adapter1 == nullptr || output == nullptr) throw invalid_argument("No adapter found");
+
+    DXGI_ADAPTER_DESC1 adapterDesc;
+    hr = adapter1->GetDesc1(&adapterDesc);
+    if (FAILED(hr)) {
+        std::cout << "Unable to access adapter description";
+        return hr;
+    }
+
+    DXGI_OUTPUT_DESC outputDesc;
+    hr = output->GetDesc(&outputDesc);
+    if (FAILED(hr)) {
+        std::cout << "Unable to access output description";
+        return hr;
+    }
+
+    RECT &desktopCoordinates = outputDesc.DesktopCoordinates;
+
+    stringstream infoStream;
+    infoStream << "Adapter output found:"
+               << " Description='" << adapterDesc.Description
+               << "', DeviceId='" << adapterDesc.DeviceId
+               << "', DeviceName='" << outputDesc.DeviceName
+               << "', Rotation='" << outputDesc.Rotation
+               << "', DesktopCoordinates='(" << desktopCoordinates.left
+               << "," << desktopCoordinates.top
+               << "),(" << desktopCoordinates.right
+               << "," << desktopCoordinates.bottom
+               << ")'";
+    std::cout << infoStream.str();
+
+    CComPtr<ID3D11Device> device;
+    CComPtr<ID3D11DeviceContext> deviceContext;
+    auto featureLevel = D3D_FEATURE_LEVEL_9_1;
+
+    hr = D3D11CreateDevice(
+            adapter1,
+            D3D_DRIVER_TYPE_UNKNOWN,
+            nullptr,
+            0,
+            nullptr,
+            0,
+            D3D11_SDK_VERSION,
+            &device,
+            &featureLevel,
+            &deviceContext
+    );
+
+    if (FAILED(hr)) {
+        std::cout << "Unable to create D3D device";
+        return hr;
+    }
+
+    CComQIPtr<IDXGIOutput1> output1(output);
+    if (output1 == nullptr) {
+        std::cout << "output does not implement IDXGIOutput1";
+        return E_FAIL;
+    }
+
+    CComQIPtr<IDXGIDevice1> device1(device);
+    if (device1 == nullptr) {
+        std::cout << "device does not implement IDXGIDevice1";
+        return E_FAIL;
+    }
+
+    CComPtr<IDXGIOutputDuplication> outputDuplication;
+
+    hr = output1->DuplicateOutput(
+            device1,
+            &outputDuplication
+    );
+
+    if (FAILED(hr)) {
+        std::cout << "Unable to duplicate output";
+        return hr;
+    }
+
+    this->sampleStep = sampleStep;
+    this->output1 = output1;
+    this->device = device;
+    this->deviceContext = deviceContext;
+    this->outputDuplication = outputDuplication;
+    CopyRect(&dimensions, &desktopCoordinates);
+    initialised = true;
+
+    width = (desktopCoordinates.right - desktopCoordinates.left) / sampleStep;
+    height = (desktopCoordinates.bottom - desktopCoordinates.top) / sampleStep;
+    requiredBufferSize = width * height * 4;
+
+    *outBufferSize = requiredBufferSize;
+    return NOERROR;
 }
 
 rectangle capture::getDimensions() {
-    return rectangle(
-            point(0, height),
-            point(width, 0)
-    );
+    return {
+            {0,     height},
+            {width, 0}
+    };
 }
 
-captureResult capture::getOutputBits(unsigned char *inoutBuffer, size_t inoutBufferSize) {
-    if (!initialised) return captureResult::FailureInitRequired;
-    if (inoutBufferSize < requiredBufferSize) return captureResult::FailureBufferTooSmall;
+HRESULT capture::getOutputBits(unsigned char *inoutBuffer, size_t inoutBufferSize) {
+    if (!initialised) return E_FAIL;
+    if (inoutBufferSize < requiredBufferSize) return E_FAIL;
 
-    try {
-        DXGI_OUTPUT_DESC outDesc;
-        SUCCESS_OR_THROW(
-                "Unable to access output description",
-                output1->GetDesc(&outDesc)
-        );
-
-        CComPtr<IDXGISurface1> dxgiSurface1 = acquireNextFrame();
-
-        DXGI_MAPPED_RECT mappedRect;
-        dxgiSurface1->Map(&mappedRect, DXGI_MAP_READ);
-
-        switch (outDesc.Rotation) {
-            case DXGI_MODE_ROTATION_IDENTITY: {
-                for (long y = 0; y < height; y++) {
-                    auto sourceYOffset = y * mappedRect.Pitch * sampleStep;
-                    auto bufferYOffset = y * width * 4;
-                    for (long x = 0; x < width; x++) {
-                        auto sourceXOffset = x * 4 * sampleStep;
-                        auto bufferXOffset = x * 4;
-                        auto sourceOffset = sourceYOffset + sourceXOffset;
-                        auto bufferOffset = bufferYOffset + bufferXOffset;
-                        // Copies 4 bytes (BGRA)
-                        memcpy_s(
-                                inoutBuffer + bufferOffset,
-                                4,
-                                mappedRect.pBits + sourceOffset,
-                                4
-                        );
-                    }
-                }
-            }
-                break;
-            default:
-                // TODO handle different rotations...
-                return captureResult::FailureNotImplemented;
-        }
-        dxgiSurface1->Unmap();
-        outputDuplication->ReleaseFrame();
-
-        return captureResult::Success;
-    } catch (hresultException &e) {
-        if (e.getHresult() == DXGI_ERROR_ACCESS_LOST) {
-            return captureResult::FailureInitRequired;
-        }
-
-        wostringstream errorStream;
-        errorStream << e.what();
-        logger->error(errorStream.str());
-        throw e;
+    DXGI_OUTPUT_DESC outDesc;
+    HRESULT hr = output1->GetDesc(&outDesc);
+    if (FAILED(hr)) {
+        std::cout << "Unable to access output description";
+        return hr;
     }
-}
 
-CComPtr<IDXGISurface1> capture::acquireNextFrame() {
     DXGI_OUTDUPL_FRAME_INFO frameInfo;
     CComPtr<IDXGIResource> dxgiResource;
 
-    SUCCESS_OR_THROW(
-            "Could not acquire next frame",
-            outputDuplication->AcquireNextFrame(INFINITE, &frameInfo, &dxgiResource)
-    );
+    hr = outputDuplication->AcquireNextFrame(INFINITE, &frameInfo, &dxgiResource);
+    if (FAILED(hr)) {
+        std::cout << "Could not acquire next frame";
+        return hr;
+    }
 
     CComQIPtr<ID3D11Texture2D> fromTexture2D(dxgiResource);
 
@@ -222,11 +196,48 @@ CComPtr<IDXGISurface1> capture::acquireNextFrame() {
     toTexture2DDesc.MiscFlags = 0;
 
     CComPtr<ID3D11Texture2D> toTexture2D = nullptr;
-    SUCCESS_OR_THROW("", device->CreateTexture2D(&toTexture2DDesc, nullptr, &toTexture2D));
+    hr = device->CreateTexture2D(&toTexture2DDesc, nullptr, &toTexture2D);
+    if (FAILED(hr)) {
+        std::cout << "Could not create texture";
+        return hr;
+    }
 
     deviceContext->CopyResource(toTexture2D, fromTexture2D);
 
-    return CComQIPtr<IDXGISurface1>(toTexture2D);
+    CComPtr<IDXGISurface1> dxgiSurface1 = CComQIPtr<IDXGISurface1>(toTexture2D);
+
+    DXGI_MAPPED_RECT mappedRect;
+    dxgiSurface1->Map(&mappedRect, DXGI_MAP_READ);
+
+    switch (outDesc.Rotation) {
+        case DXGI_MODE_ROTATION_IDENTITY: {
+            for (long y = 0; y < height; y++) {
+                auto sourceYOffset = y * mappedRect.Pitch * sampleStep;
+                auto bufferYOffset = y * width * 4;
+                for (long x = 0; x < width; x++) {
+                    auto sourceXOffset = x * 4 * sampleStep;
+                    auto bufferXOffset = x * 4;
+                    auto sourceOffset = sourceYOffset + sourceXOffset;
+                    auto bufferOffset = bufferYOffset + bufferXOffset;
+                    // Copies 4 bytes (BGRA)
+                    memcpy_s(
+                            inoutBuffer + bufferOffset,
+                            4,
+                            mappedRect.pBits + sourceOffset,
+                            4
+                    );
+                }
+            }
+        }
+            break;
+        default:
+            // TODO handle different rotations...
+            return E_FAIL;
+    }
+    dxgiSurface1->Unmap();
+    outputDuplication->ReleaseFrame();
+
+    return NOERROR;
 }
 
 void capture::reset() {
