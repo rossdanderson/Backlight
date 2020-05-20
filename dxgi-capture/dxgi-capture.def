@@ -1,0 +1,3 @@
+headers = common.h wrapper.h
+headerFilter = common.h wrapper.h
+package = capture

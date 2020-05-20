@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    val kotlinVersion = "1.3.70"
+    val kotlinVersion = "1.3.72"
 
     idea
     java
@@ -16,7 +16,6 @@ plugins {
 group = "com.github.rossdanderson.backlight"
 version = "1.0-SNAPSHOT"
 
-
 repositories {
     mavenCentral()
     jcenter()
@@ -25,7 +24,7 @@ repositories {
 
 val kotlinSerializationVersion = "0.20.0"
 val kotlinCoroutinesVersion = "1.3.3"
-val javaFXVersion = "13"
+val javaFXVersion = "12.0.1"
 val koinVersion = "2.0.1"
 val jSerialCommVersion = "2.5.2"
 val kotlinLoggingVersion = "1.7.6"
@@ -53,8 +52,8 @@ application {
 }
 
 java {
-    targetCompatibility = JavaVersion.VERSION_13
-    sourceCompatibility = JavaVersion.VERSION_13
+    targetCompatibility = JavaVersion.VERSION_12
+    sourceCompatibility = JavaVersion.VERSION_12
 }
 
 javafx {
