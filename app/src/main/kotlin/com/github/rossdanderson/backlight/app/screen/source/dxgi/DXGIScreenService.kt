@@ -30,22 +30,24 @@ class DXGIScreenService(
     private val sampleStepFlow = configService.configFlow.map { it.sampleStep }.distinctUntilChanged()
 
     override val screenFlow: Flow<BufferedImage> =
-        flow<BufferedImage> {
+        flow {
             val capture = Capture()
             val captureLogger = logger.logDurations("Captures", 100)
             emitAll(
                 combine(sampleStepFlow, minDelayMillisFlow) { sampleStep, minDelayMillis ->
                     flow {
                         initLoop@ while (true) {
+                            val retryDuration = 1.seconds
                             val bufferSizeArray = LongArray(1)
                             if (capture.init(sampleStep, bufferSizeArray) != 0) {
+                                logger.warn { "Unable to initialise, retrying in $retryDuration" }
+                                delay(retryDuration)
                                 continue@initLoop
                             }
                             val arraySize = bufferSizeArray[0]
                             if (arraySize == 0L) {
-                                val duration = 1.seconds
-                                logger.warn { "Unable to initialise, retrying in $duration" }
-                                delay(duration)
+                                logger.warn { "Invalid array size, retrying in $retryDuration" }
+                                delay(retryDuration)
                                 continue@initLoop
                             }
                             logger.info { "Using buffer array size: $arraySize" }
@@ -85,7 +87,11 @@ class DXGIScreenService(
                                             emit(bufferedImage)
                                         }
                                     }
-                                    else -> TODO("Not currently implemented")
+                                    else -> {
+                                        logger.warn { "Unable to get capture bits: $captureResult" }
+                                        delay(retryDuration)
+                                        continue@initLoop
+                                    }
                                 }
 
                                 val delayDuration =

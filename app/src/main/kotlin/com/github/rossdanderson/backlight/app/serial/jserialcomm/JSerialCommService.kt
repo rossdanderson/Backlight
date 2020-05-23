@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicLong
 class JSerialCommService(scope: CoroutineScope) : ISerialService {
 
     private val logger = KotlinLogging.logger {}
-    private val lastHeartbeatSent = AtomicLong()
     private val sendHeartbeat = AtomicBoolean()
     private val sendHeartbeatAck = AtomicBoolean()
 
@@ -68,8 +67,6 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
 
                             val deferredHandshakeResponse =
                                 async { receiveFlow.filterIsInstance<HandshakeResponseMessage>().first() }
-
-
 
                             attemptSerialPort.writeMessage(HandshakeRequestMessage)
 
