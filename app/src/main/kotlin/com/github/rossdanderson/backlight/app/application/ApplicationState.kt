@@ -2,15 +2,9 @@
 
 package com.github.rossdanderson.backlight.app.application
 
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
-import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class ApplicationState {
 
-    private val minimisedBroadcastChannel = ConflatedBroadcastChannel(false)
-    val minimisedFlow = minimisedBroadcastChannel.asFlow()
-
-    suspend fun setMinimised(value: Boolean) {
-        minimisedBroadcastChannel.send(value)
-    }
+    val minimised = MutableStateFlow(false)
 }

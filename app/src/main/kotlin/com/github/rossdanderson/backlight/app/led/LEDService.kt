@@ -1,20 +1,21 @@
-@file:Suppress("EXPERIMENTAL_API_USAGE")
+@file:Suppress("EXPERIMENTAL_API_USAGE", "EXPERIMENTAL_UNSIGNED_LITERALS")
 
 package com.github.rossdanderson.backlight.app.led
 
 import com.github.rossdanderson.backlight.app.applyContrast
 import com.github.rossdanderson.backlight.app.applySaturation
 import com.github.rossdanderson.backlight.app.config.ConfigService
-import com.github.rossdanderson.backlight.app.data.Image
 import com.github.rossdanderson.backlight.app.data.IntRange2D
+import com.github.rossdanderson.backlight.app.data.LEDColors
 import com.github.rossdanderson.backlight.app.data.UColor
 import com.github.rossdanderson.backlight.app.greyscaleLuminosity
 import com.github.rossdanderson.backlight.app.screen.IScreenService
 import com.github.rossdanderson.backlight.app.serial.ConnectionState
 import com.github.rossdanderson.backlight.app.serial.ISerialService
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.flow.*
 import java.lang.Double.max
+import kotlin.math.sqrt
 import kotlin.time.ExperimentalTime
 
 @ExperimentalTime
@@ -25,7 +26,7 @@ class LEDService(
 ) {
     private val ledCountFlow = flowOf(
         flowOf(10),
-        serialService.connectionStateFlow
+        serialService.connectionState
             .filterIsInstance<ConnectionState.Connected>()
             .map { it.ledCount }
             .distinctUntilChanged()
@@ -34,17 +35,18 @@ class LEDService(
     private val contrastFactorFlow = configService.configFlow.map { it.contrastFactor }.distinctUntilChanged()
     private val saturationAlphaFlow = configService.configFlow.map { it.saturationAlpha }.distinctUntilChanged()
 
-    val ledColorsFlow: Flow<List<UColor>> = ledCountFlow
+    val ledColorsFlow: Flow<LEDColors> = ledCountFlow
         .flatMapLatest { ledCount ->
             var prevImageWidth: Int? = null
             var prevImageHeight: Int? = null
             var screenSections: List<IntRange2D>? = null
 
             combine(
-                screenService.screenFlow.map { Image(it) },
+                screenService.screenFlow.map { it },
                 contrastFactorFlow,
                 saturationAlphaFlow
-            ) { image, contrastFactor, saturationAlpha ->
+            ) { screenData, contrastFactor, saturationAlpha ->
+                val image = screenData.image
                 // If the image dimensions or the number of LEDs changes, remap the screen sections to sample from
                 if (screenSections == null || prevImageHeight != image.height || prevImageWidth != image.width) {
                     prevImageWidth = image.width
@@ -75,31 +77,38 @@ class LEDService(
                         intRange2D.forEach { x, y ->
                             val rgb = image[x, y]
                             val greyscaleLuminosity = rgb.greyscaleLuminosity()
-                            red += rgb.red
+                            red += rgb.red.toInt()
                                 .applySaturation(saturationAlpha, greyscaleLuminosity)
                                 .applyContrast(contrastFactor)
-                            green += rgb.green
+                                .let { it * it }
+                            green += rgb.green.toInt()
                                 .applySaturation(saturationAlpha, greyscaleLuminosity)
                                 .applyContrast(contrastFactor)
-                            blue += rgb.blue
+                                .let { it * it }
+                            blue += rgb.blue.toInt()
                                 .applySaturation(saturationAlpha, greyscaleLuminosity)
                                 .applyContrast(contrastFactor)
+                                .let { it * it }
                             count++
                         }
 
-                        val redAvg = (red / count).toUByte()
-                        val greenAvg = (green / count).toUByte()
-                        val blueAvg = (blue / count).toUByte()
+                        val mul = 1.0 / count
+
+                        val redAvg = sqrt(red * mul).toInt().toUByte()
+                        val greenAvg = sqrt(green * mul).toInt().toUByte()
+                        val blueAvg = sqrt(blue * mul).toInt().toUByte()
 
                         UColor(redAvg, greenAvg, blueAvg)
                     }
                     .toList()
-                toList
+
+
+                LEDColors(screenData.sourceTimestamp, toList)
             }
         }
         .distinctUntilChanged()
         .conflate()
-        .flowOn(Dispatchers.Default)
+        .flowOn(Default)
 
     private fun offsetIntRange(start: Int, length: Int): IntRange = start until (start + length)
 }

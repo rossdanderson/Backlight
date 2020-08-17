@@ -11,7 +11,6 @@ import com.github.rossdanderson.backlight.app.serial.ConnectionState
 import com.github.rossdanderson.backlight.app.serial.ConnectionState.Disconnected
 import com.github.rossdanderson.backlight.app.serial.ISerialService
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
 import mu.KotlinLogging
@@ -27,10 +26,10 @@ class MockSerialService : ISerialService {
 
     private val connectedPort = AtomicReference<String?>(null)
 
-    private val connectionStateChannel: ConflatedBroadcastChannel<ConnectionState> =
-        ConflatedBroadcastChannel(Disconnected)
+    private val _connectionState: MutableStateFlow<ConnectionState> = MutableStateFlow(Disconnected)
 
-    override val connectionStateFlow: Flow<ConnectionState> = connectionStateChannel.asFlow()
+    override val connectionState: StateFlow<ConnectionState>
+        get() = _connectionState
 
     override val receiveFlow: Flow<Message> = flowOf()
 
@@ -52,7 +51,7 @@ class MockSerialService : ISerialService {
             }
             else -> when (val previousConnection = connectedPort.compareAndExchange(null, portDescriptor)) {
                 null -> {
-                    connectionStateChannel.send(ConnectionState.Connected(portDescriptor, 60))
+                    _connectionState.value = ConnectionState.Connected(portDescriptor, 60)
                     logger.info { "Connected to $portDescriptor" }
                     Success
                 }
@@ -69,7 +68,7 @@ class MockSerialService : ISerialService {
         when (val previousConnection = connectedPort.getAndSet(null)) {
             null -> logger.warn { "Cannot disconnect - not currently connected" }
             else -> {
-                connectionStateChannel.send(Disconnected)
+                _connectionState.value = Disconnected
                 logger.info { "Disconnected from $previousConnection" }
             }
         }

@@ -6,11 +6,9 @@ import com.github.rossdanderson.backlight.app.data.Lens
 import com.github.rossdanderson.backlight.app.data.Setter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -21,39 +19,40 @@ import kotlin.time.ExperimentalTime
 
 @ExperimentalTime
 class ConfigService(
-    private val json: Json
+    private val json: Json,
 ) {
     private val modifyMutex = Mutex()
-
-    private val configBroadcastChannel = ConflatedBroadcastChannel<Config>()
-    val configFlow: Flow<Config> = configBroadcastChannel.asFlow()
 
     companion object {
         private val logger = KotlinLogging.logger { }
         private val path = Paths.get("${System.getProperty("user.home")}/.backlight.json").toAbsolutePath()
     }
 
+    private val _configFlow: MutableStateFlow<Config>
+
     init {
-        runBlocking {
-            val file = path.toFile()
-            if (file.exists()) {
-                runCatching {
-                    file.bufferedReader().use {
-                        val text = it.readText()
-                        val config = json.parse(Config.serializer(), text)
-                        logger.info { "Loaded $config" }
-                        publish(config)
-                    }
-                }.recover {
-                    logger.warn(it) { "Unable to load config from $path - using defaults" }
-                    persistAndPublish(Config())
+        val file = path.toFile()
+        val config = if (file.exists()) {
+            runCatching {
+                file.bufferedReader().use {
+                    val text = it.readText()
+                    val config = json.decodeFromString(Config.serializer(), text)
+                    logger.info { "Loaded $config" }
+                    config
                 }
-            } else {
-                logger.info { "No config found at $path - using defaults" }
-                persistAndPublish(Config())
+            }.getOrElse {
+                logger.warn(it) { "Unable to load config from $path - using defaults" }
+                Config()
             }
+        } else {
+            logger.info { "No config found at $path - using defaults" }
+            Config()
         }
+        _configFlow = MutableStateFlow(config)
     }
+
+    val configFlow: StateFlow<Config>
+        get() = _configFlow
 
     suspend fun <T> modify(lens: Lens<Config, T>, mutator: (T) -> T) {
         modify(lens.asSetter(), mutator)
@@ -82,7 +81,7 @@ class ConfigService(
     private suspend fun persistAndPublish(config: Config) {
         withContext(NonCancellable) {
             logger.info { "Persisting $config" }
-            val serializedConfig = json.stringify(Config.serializer(), config)
+            val serializedConfig = json.encodeToString(Config.serializer(), config)
             withContext(Dispatchers.IO) {
                 path.toFile().bufferedWriter().use { it.write(serializedConfig) }
             }
@@ -93,7 +92,7 @@ class ConfigService(
     private suspend fun publish(config: Config) {
         withContext(NonCancellable) {
             logger.info { "Publishing $config" }
-            configBroadcastChannel.send(config)
+            _configFlow.value = config
         }
     }
 }

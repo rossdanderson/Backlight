@@ -4,10 +4,11 @@ package com.github.rossdanderson.backlight.app.serial
 
 import com.github.rossdanderson.backlight.app.messages.Message
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 interface ISerialService {
 
-    val connectionStateFlow: Flow<ConnectionState>
+    val connectionState: StateFlow<ConnectionState>
 
     val availablePortDescriptorsFlow: Flow<List<String>>
 

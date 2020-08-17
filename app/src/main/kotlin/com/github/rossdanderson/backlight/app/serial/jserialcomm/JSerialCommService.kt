@@ -11,15 +11,14 @@ import com.github.rossdanderson.backlight.app.serial.ConnectionState.*
 import com.github.rossdanderson.backlight.app.serial.ISerialService
 import com.github.rossdanderson.backlight.app.serial.jserialcomm.JSerialCommService.ConnectionActorMessage.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.channels.receiveOrNull
 import kotlinx.coroutines.flow.*
 import mu.KotlinLogging
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicLong
 
 class JSerialCommService(scope: CoroutineScope) : ISerialService {
 
@@ -42,7 +41,7 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
         ) : ConnectionActorMessage()
     }
 
-    private val connectionActor = scope.actor<ConnectionActorMessage>(Dispatchers.IO, BUFFERED) {
+    private val connectionActor = scope.actor<ConnectionActorMessage>(IO, BUFFERED) {
         var serialPort: SerialPort? = null
 
         suspend fun handleConnect(message: Connect) {
@@ -50,7 +49,7 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
                 null -> {
                     logger.info { "Attempting connecting to ${message.descriptivePortName}" }
 
-                    connectionStateChannel.send(Connecting(message.descriptivePortName))
+                    _connectionState.value = Connecting(message.descriptivePortName)
 
                     val attemptSerialPort =
                         SerialPort.getCommPorts().singleOrNull { it.descriptivePortName == message.descriptivePortName }
@@ -74,11 +73,9 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
 
                             if (handshakeResponse != null) {
                                 logger.info { "Connected to ${message.descriptivePortName}" }
-                                connectionStateChannel.send(
-                                    Connected(
-                                        message.descriptivePortName,
-                                        handshakeResponse.ledCount
-                                    )
+                                _connectionState.value = Connected(
+                                    message.descriptivePortName,
+                                    handshakeResponse.ledCount
                                 )
 
                                 serialPort = attemptSerialPort
@@ -88,17 +85,17 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
                                 logger.warn { "Cannot connect to ${message.descriptivePortName} - handshake failed" }
                                 attemptSerialPort.removeDataListener()
                                 attemptSerialPort.closePort()
-                                connectionStateChannel.send(Disconnected)
+                                _connectionState.value = Disconnected
                                 ConnectResult.Failure("Handshake failed")
                             }
                         } else {
                             logger.warn { "Cannot connect to ${message.descriptivePortName} - unable to open port" }
-                            connectionStateChannel.send(Disconnected)
+                            _connectionState.value = Disconnected
                             ConnectResult.Failure("Unable to open port")
                         }
                     } else {
                         logger.warn { "Cannot connect to ${message.descriptivePortName} - unable to find port" }
-                        connectionStateChannel.send(Disconnected)
+                        _connectionState.value = Disconnected
                         ConnectResult.Failure("Unable to find port")
                     }
                 }
@@ -112,11 +109,11 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
             message.response.complete(connectResult)
         }
 
-        suspend fun handleDisconnect(message: Disconnect) {
+        fun handleDisconnect(message: Disconnect) {
             when (val currentSerialPort = serialPort) {
                 null -> logger.warn { "Cannot disconnect - not currently connected" }
                 else -> {
-                    connectionStateChannel.send(Disconnected)
+                    _connectionState.value = Disconnected
                     currentSerialPort.removeDataListener()
                     currentSerialPort.closePort()
                     logger.info { "Disconnected from ${currentSerialPort.descriptivePortName}" }
@@ -156,7 +153,7 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
         }
             .map { SerialPort.getCommPorts().map { it.descriptivePortName } }
             .conflate()
-            .flowOn(Dispatchers.IO)
+            .flowOn(IO)
             .onEach { logger.info { "Port refresh discovered: $it" } }
             .distinctUntilChanged()
 
@@ -167,9 +164,8 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
         Job().also { connectionActor.send(Disconnect(it)) }.join()
     }
 
-    private val connectionStateChannel = ConflatedBroadcastChannel<ConnectionState>(Disconnected)
-    override val connectionStateFlow: Flow<ConnectionState> = connectionStateChannel.asFlow().distinctUntilChanged()
-
+    private val _connectionState = MutableStateFlow<ConnectionState>(Disconnected)
+    override val connectionState: StateFlow<ConnectionState> get() = _connectionState
 
     private val receiveFlowChannel = BroadcastChannel<Message>(BUFFERED)
     override val receiveFlow: Flow<Message> = receiveFlowChannel.asFlow()

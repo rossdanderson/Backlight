@@ -4,7 +4,9 @@ package com.github.rossdanderson.backlight.app.daemon
 
 import com.github.rossdanderson.backlight.app.config.Config
 import com.github.rossdanderson.backlight.app.config.ConfigService
+import com.github.rossdanderson.backlight.app.data.LEDColors
 import com.github.rossdanderson.backlight.app.led.LEDService
+import com.github.rossdanderson.backlight.app.messages.Message
 import com.github.rossdanderson.backlight.app.messages.PrintMessage
 import com.github.rossdanderson.backlight.app.messages.SetBrightnessMessage
 import com.github.rossdanderson.backlight.app.messages.WriteAllMessage
@@ -30,9 +32,18 @@ class DaemonJobManager(
     init {
         // Bind the led flow to serial out
         launch {
-            serialService.connectionStateFlow
-                .flatMapLatest { if (it is ConnectionState.Connected) ledService.ledColorsFlow else emptyFlow() }
-                .collect { serialService.send(WriteAllMessage(it)) }
+            serialService.connectionState
+                .flatMapLatest {
+                    if (it is ConnectionState.Connected) ledService.ledColorsFlow.map<LEDColors, Message> {
+                        WriteAllMessage(
+                            it.colors
+                        )
+                    }.onStart { emit(SetBrightnessMessage((configService.configFlow.value.brightness / 10 * 255).toInt().toUByte())) } else emptyFlow()
+                }
+                .conflate()
+                .collect {
+                    serialService.send(it)
+                }
         }
 
         // Bind the led flow to serial out

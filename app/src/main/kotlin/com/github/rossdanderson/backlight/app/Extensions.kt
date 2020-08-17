@@ -1,17 +1,18 @@
-@file:Suppress("EXPERIMENTAL_API_USAGE")
+@file:Suppress("EXPERIMENTAL_API_USAGE", "EXPERIMENTAL_UNSIGNED_LITERALS")
 
 package com.github.rossdanderson.backlight.app
 
+import com.github.rossdanderson.backlight.app.data.UColor
 import javafx.beans.value.ChangeListener
 import javafx.beans.value.ObservableValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
+import kotlinx.coroutines.channels.BroadcastChannel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import mu.KLogger
-import java.awt.Color
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
@@ -20,12 +21,12 @@ import kotlin.time.Duration.Companion.ZERO
 import kotlin.time.ExperimentalTime
 
 fun Int.applySaturation(alpha: Double, greyscaleLuminosity: Double): Int =
-    maxOf(0, minOf(255, (alpha * this + (1.0 - alpha) * greyscaleLuminosity).toInt()))
+    maxOf(0, minOf(255, ((alpha * this + (1.0 - alpha) * greyscaleLuminosity).toInt())))
 
 fun Int.applyContrast(contrastFactor: Double): Int =
     maxOf(0, minOf((contrastFactor * (this - 128) + 128).toInt(), 255))
 
-fun Color.greyscaleLuminosity() = red * 0.299 + green * 0.587 + blue * 0.114
+fun UColor.greyscaleLuminosity(): Double = red.toDouble() * 0.299 + green.toDouble() * 0.587 + blue.toDouble() * 0.114
 
 fun <U : Any> Flow<Flow<U>>.flatMapLatest(): Flow<U> = flatMapLatest { it }
 
@@ -34,7 +35,7 @@ fun <U : Any> Flow<U>.share(scope: CoroutineScope): Flow<U> {
     val references = AtomicInteger()
     val subscription = AtomicReference<Job>()
 
-    val sharedBroadcastChannel = ConflatedBroadcastChannel<U>()
+    val sharedBroadcastChannel = BroadcastChannel<U>(Channel.BUFFERED)
 
     return flow {
         if (references.getAndIncrement() == 0) {

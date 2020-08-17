@@ -3,20 +3,20 @@
 package com.github.rossdanderson.backlight.app.data
 
 inline class UColor(
-    val rgb: UByteArray = UByteArray(3)
+    private val bgr: UByteArray = UByteArray(3)
 ) {
     constructor(
         red: UByte,
         green: UByte,
         blue: UByte
-    ) : this(ubyteArrayOf(red, green, blue))
+    ) : this(ubyteArrayOf(blue, green, red))
 
     val red: UByte
-        get() = rgb[0]
+        get() = bgr[redOffset]
 
     val green: UByte
-        get() = rgb[1]
+        get() = bgr[greenOffset]
 
     val blue: UByte
-        get() = rgb[2]
+        get() = bgr[blueOffset]
 }

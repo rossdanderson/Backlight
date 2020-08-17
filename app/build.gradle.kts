@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    val kotlinVersion = "1.3.72"
+    val kotlinVersion = "1.4.0"
 
     idea
     java
@@ -22,8 +22,8 @@ repositories {
     maven("https://oss.sonatype.org/content/repositories/snapshots")
 }
 
-val kotlinSerializationVersion = "0.20.0"
-val kotlinCoroutinesVersion = "1.3.3"
+val kotlinSerializationVersion = "1.0.0-RC"
+val kotlinCoroutinesVersion = "1.3.9"
 val javaFXVersion = "12.0.1"
 val koinVersion = "2.0.1"
 val jSerialCommVersion = "2.5.2"
@@ -36,7 +36,7 @@ dependencies {
     implementation(kotlin("reflect"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-javafx:$kotlinCoroutinesVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kotlinSerializationVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinSerializationVersion")
     implementation("com.fazecast:jSerialComm:$jSerialCommVersion")
     implementation("no.tornado:tornadofx:$tornadofxVersion")
     implementation("org.koin:koin-core:$koinVersion")

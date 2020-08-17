@@ -16,9 +16,9 @@ inline class WriteAllMessage(
             val uByteArray = UByteArray(colors.count() * 3 + 1)
             uByteArray[0] = WRITE_ALL.toUByte()
             colors.reversed().forEachIndexed { ledIndex, color ->
-                color.rgb.forEachIndexed { colorIndex, j ->
-                    uByteArray[(ledIndex * 3) + 1 + colorIndex] = j
-                }
+                uByteArray[(ledIndex * 3) + 1 + 0] = color.red
+                uByteArray[(ledIndex * 3) + 1 + 1] = color.green
+                uByteArray[(ledIndex * 3) + 1 + 2] = color.blue
             }
             return WriteAllMessage(uByteArray)
         }

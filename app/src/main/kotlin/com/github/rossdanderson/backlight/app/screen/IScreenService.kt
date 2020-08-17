@@ -2,9 +2,9 @@
 
 package com.github.rossdanderson.backlight.app.screen
 
+import com.github.rossdanderson.backlight.app.data.ScreenData
 import kotlinx.coroutines.flow.Flow
-import java.awt.image.BufferedImage
 
 interface IScreenService {
-    val screenFlow: Flow<BufferedImage>
+    val screenFlow: Flow<ScreenData>
 }

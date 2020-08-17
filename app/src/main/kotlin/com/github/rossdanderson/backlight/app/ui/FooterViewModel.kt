@@ -11,7 +11,7 @@ class FooterViewModel : BaseViewModel() {
 
     private val serialService by di<ISerialService>()
 
-    val connectionStatusFlow = serialService.connectionStateFlow.map {
+    val connectionStatusFlow = serialService.connectionState.map {
         when (it) {
             is Connected -> "Connected to ${it.portDescriptor}"
             is Connecting -> "Connecting to ${it.portDescriptor}..."

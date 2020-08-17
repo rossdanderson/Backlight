@@ -2,19 +2,11 @@
 
 package com.github.rossdanderson.backlight.app.ui
 
-import com.github.rossdanderson.backlight.app.application.ApplicationState
 import com.github.rossdanderson.backlight.app.ui.base.BaseView
-import javafx.geometry.Insets
-import javafx.geometry.Pos
-import javafx.scene.layout.Background
-import javafx.scene.layout.BackgroundFill
-import javafx.scene.layout.CornerRadii
 import javafx.scene.paint.Color
 import javafx.scene.paint.CycleMethod
 import javafx.scene.paint.LinearGradient
 import javafx.scene.paint.Stop
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import tornadofx.*
@@ -26,7 +18,6 @@ const val colorFormatMultiplier = 1.0 / 255.0
 class MainView : BaseView("Backlight") {
 
     private val vm by inject<MainViewModel>()
-    private val eventBus by di<ApplicationState>()
 
     override val root = borderpane {
         center {
@@ -36,21 +27,6 @@ class MainView : BaseView("Backlight") {
                 paddingRight = 10
                 paddingBottom = 10
                 vbox {
-                    vbox {
-                        background = Background(BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY))
-                        alignment = Pos.CENTER
-                        imageview {
-                            eventBus.minimisedFlow
-                                .flatMapLatest { minimised -> if (minimised) emptyFlow() else vm.imageFlow }
-                                .onEach { image = it }
-                                .launchIn(coroutineScope)
-                            isSmooth = true
-                            isPreserveRatio = true
-                            fitHeight = 270.0
-                            fitWidth = 480.0
-                        }
-                    }
-
                     val previewSlider = label("Preview:")
                     rectangle {
                         width = 512.0
@@ -58,16 +34,16 @@ class MainView : BaseView("Backlight") {
                         arcWidth = 15.0
                         arcHeight = 15.0
                         vm.ledColorsFlow
-                            .onEach { colors ->
+                            .onEach { ledData ->
+                                val colors = ledData.colors
                                 val step = 1.0 / (colors.size - 1)
                                 val stops = colors.mapIndexed { index, color ->
                                     Stop(
                                         step * index,
-                                        Color(
-                                            color.red.toDouble() * colorFormatMultiplier,
-                                            color.green.toDouble() * colorFormatMultiplier,
-                                            color.blue.toDouble() * colorFormatMultiplier,
-                                            1.0
+                                        Color.rgb(
+                                            color.red.toInt(),
+                                            color.green.toInt(),
+                                            color.blue.toInt()
                                         )
                                     )
                                 }
