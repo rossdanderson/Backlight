@@ -22,18 +22,25 @@ import kotlin.time.ExperimentalTime
 class LEDService(
     private val screenService: IScreenService,
     configService: ConfigService,
-    serialService: ISerialService
+    serialService: ISerialService,
 ) {
-    private val ledCountFlow = flowOf(
-        flowOf(10),
-        serialService.connectionState
-            .filterIsInstance<ConnectionState.Connected>()
-            .map { it.ledCount }
-            .distinctUntilChanged()
-    ).flattenConcat()
+    private val ledCountFlow =
+        flowOf(
+            flowOf(10),
+            serialService.connectionState
+                .filterIsInstance<ConnectionState.Connected>()
+                .map { it.ledCount }
+                .distinctUntilChanged()
+        )
+            .flattenConcat()
 
-    private val contrastFactorFlow = configService.configFlow.map { it.contrastFactor }.distinctUntilChanged()
-    private val saturationAlphaFlow = configService.configFlow.map { it.saturationAlpha }.distinctUntilChanged()
+    private val contrastFactorFlow = configService.configFlow
+        .map { config -> config.contrastFactor }
+        .distinctUntilChanged()
+
+    private val saturationAlphaFlow = configService.configFlow
+        .map { config -> config.saturationAlpha }
+        .distinctUntilChanged()
 
     val ledColorsFlow: Flow<LEDColors> = ledCountFlow
         .flatMapLatest { ledCount ->
@@ -42,7 +49,7 @@ class LEDService(
             var screenSections: List<IntRange2D>? = null
 
             combine(
-                screenService.screenFlow.map { it },
+                screenService.screenFlow,
                 contrastFactorFlow,
                 saturationAlphaFlow
             ) { screenData, contrastFactor, saturationAlpha ->
@@ -67,7 +74,7 @@ class LEDService(
                     }
                 }
 
-                val toList: List<UColor> = screenSections!!
+                val ledColorData: List<UColor> = screenSections!!
                     .map { intRange2D ->
                         var red = 0
                         var green = 0
@@ -77,33 +84,28 @@ class LEDService(
                         intRange2D.forEach { x, y ->
                             val rgb = image[x, y]
                             val greyscaleLuminosity = rgb.greyscaleLuminosity()
-                            red += rgb.red.toInt()
-                                .applySaturation(saturationAlpha, greyscaleLuminosity)
-                                .applyContrast(contrastFactor)
-                                .let { it * it }
-                            green += rgb.green.toInt()
-                                .applySaturation(saturationAlpha, greyscaleLuminosity)
-                                .applyContrast(contrastFactor)
-                                .let { it * it }
-                            blue += rgb.blue.toInt()
-                                .applySaturation(saturationAlpha, greyscaleLuminosity)
-                                .applyContrast(contrastFactor)
-                                .let { it * it }
+
+                            fun UByte.apply() =
+                                toInt()
+                                    .applySaturation(saturationAlpha, greyscaleLuminosity)
+                                    .applyContrast(contrastFactor)
+                                    .let { it * it }
+
+                            red += rgb.red.apply()
+                            green += rgb.green.apply()
+                            blue += rgb.blue.apply()
                             count++
                         }
 
                         val mul = 1.0 / count
 
-                        val redAvg = sqrt(red * mul).toInt().toUByte()
-                        val greenAvg = sqrt(green * mul).toInt().toUByte()
-                        val blueAvg = sqrt(blue * mul).toInt().toUByte()
+                        fun Int.avg() = sqrt(this * mul).toInt().toUByte()
 
-                        UColor(redAvg, greenAvg, blueAvg)
+                        UColor(red.avg(), green.avg(), blue.avg())
                     }
                     .toList()
 
-
-                LEDColors(screenData.sourceTimestamp, toList)
+                LEDColors(screenData.sourceTimestamp, ledColorData)
             }
         }
         .distinctUntilChanged()

@@ -3,7 +3,7 @@
 package com.github.rossdanderson.backlight.app.messages
 
 inline class HandshakeResponseMessage(
-    override val backingArray: UByteArray
+    override val backingArray: UByteArray,
 ) : Message {
 
     companion object {

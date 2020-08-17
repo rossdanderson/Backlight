@@ -24,11 +24,15 @@ private const val success = 0
 
 @ExperimentalTime
 class DXGIScreenService(
-    configService: ConfigService
+    configService: ConfigService,
 ) : IScreenService {
 
-    private val minDelayMillisFlow = configService.configFlow.map { it.minDelayMillis }.distinctUntilChanged()
-    private val sampleStepFlow = configService.configFlow.map { it.sampleStep }.distinctUntilChanged()
+    private val minDelayMillisFlow = configService.configFlow
+        .map { config -> config.minDelayMillis }
+        .distinctUntilChanged()
+    private val sampleStepFlow = configService.configFlow
+        .map { config -> config.sampleStep }
+        .distinctUntilChanged()
 
     override val screenFlow: Flow<ScreenData> =
         flow {
@@ -87,7 +91,8 @@ class DXGIScreenService(
                                 }
                             }
                         }
-                    }.flowOn(Dispatchers.IO)
+                    }
+                        .flowOn(Dispatchers.IO)
                 }
                     .flatMapLatest()
             )

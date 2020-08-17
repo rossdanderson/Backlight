@@ -16,7 +16,7 @@ class FooterView : BaseView() {
     override val root = vbox {
         hbox(5) {
             text {
-                 vm.connectionStatusFlow.onEach { text = it }.launchIn(coroutineScope)
+                vm.connectionStatusFlow.onEach { text = it }.launchIn(coroutineScope)
             }
         }
     }

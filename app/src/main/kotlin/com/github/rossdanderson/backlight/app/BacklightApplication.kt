@@ -85,8 +85,8 @@ class BacklightApp : App(MainView::class) {
     }
 
     override fun stop() {
-        Platform.exit();
-        exitProcess(0);
+        Platform.exit()
+        exitProcess(0)
     }
 
     companion object {

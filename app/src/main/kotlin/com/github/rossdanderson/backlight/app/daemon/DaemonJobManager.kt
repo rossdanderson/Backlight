@@ -24,7 +24,7 @@ class DaemonJobManager(
     private val ledService: LEDService,
     private val configService: ConfigService,
     private val serialService: ISerialService,
-    daemonScope: CoroutineScope
+    daemonScope: CoroutineScope,
 ) : CoroutineScope by daemonScope {
 
     private val logger = KotlinLogging.logger {}
@@ -38,7 +38,10 @@ class DaemonJobManager(
                         WriteAllMessage(
                             it.colors
                         )
-                    }.onStart { emit(SetBrightnessMessage((configService.configFlow.value.brightness / 10 * 255).toInt().toUByte())) } else emptyFlow()
+                    }.onStart {
+                        emit(SetBrightnessMessage((configService.configFlow.value.brightness / 10 * 255).toInt()
+                            .toUByte()))
+                    } else emptyFlow()
                 }
                 .conflate()
                 .collect {

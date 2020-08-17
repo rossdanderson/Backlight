@@ -4,5 +4,5 @@ import java.time.Instant
 
 data class LEDColors(
     val sourceTimestamp: Instant,
-    val colors: List<UColor>
+    val colors: List<UColor>,
 )

@@ -17,7 +17,7 @@ interface Lens<S, A> {
     companion object {
         operator fun <S, A> invoke(
             get: (S) -> A,
-            set: (S, A) -> S
+            set: (S, A) -> S,
         ): Lens<S, A> = object : Lens<S, A> {
 
             override fun get(s: S) = get(s)

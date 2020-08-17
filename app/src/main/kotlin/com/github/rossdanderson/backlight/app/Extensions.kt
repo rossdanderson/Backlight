@@ -87,7 +87,7 @@ suspend fun delay(duration: Duration) {
 }
 
 fun ByteArray.cobsEncode(
-    size: Int = this.size
+    size: Int = this.size,
 ): ByteArray {
     var readIndex = 0
     var writeIndex = 1
@@ -120,7 +120,7 @@ fun ByteArray.cobsEncode(
 }
 
 fun ByteArray.cobsDecode(
-    size: Int = this.size
+    size: Int = this.size,
 ): ByteArray {
     if (size == 0)
         return ByteArray(0)

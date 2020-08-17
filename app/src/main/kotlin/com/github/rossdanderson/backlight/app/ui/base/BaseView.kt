@@ -8,5 +8,5 @@ import tornadofx.View
 abstract class BaseView(
     title: String? = null,
     icon: Node? = null,
-    val coroutineScope: CoroutineScope = MainScope()
+    val coroutineScope: CoroutineScope = MainScope(),
 ) : View(title, icon)

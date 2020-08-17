@@ -4,5 +4,5 @@ import java.time.Instant
 
 data class ScreenData(
     val sourceTimestamp: Instant,
-    val image: ImageArray
+    val image: ImageArray,
 )

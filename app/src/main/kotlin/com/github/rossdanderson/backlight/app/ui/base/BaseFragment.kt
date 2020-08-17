@@ -9,7 +9,7 @@ import tornadofx.Fragment
 abstract class BaseFragment(
     title: String? = null,
     icon: Node? = null,
-    val coroutineScope: CoroutineScope = MainScope()
+    val coroutineScope: CoroutineScope = MainScope(),
 ) : Fragment(title, icon) {
 
     override fun onUndock() {

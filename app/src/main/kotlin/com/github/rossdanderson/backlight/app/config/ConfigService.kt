@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import mu.KotlinLogging
 import java.nio.file.Paths
@@ -36,7 +38,7 @@ class ConfigService(
             runCatching {
                 file.bufferedReader().use {
                     val text = it.readText()
-                    val config = json.decodeFromString(Config.serializer(), text)
+                    val config = json.decodeFromString<Config>(text)
                     logger.info { "Loaded $config" }
                     config
                 }
@@ -81,7 +83,7 @@ class ConfigService(
     private suspend fun persistAndPublish(config: Config) {
         withContext(NonCancellable) {
             logger.info { "Persisting $config" }
-            val serializedConfig = json.encodeToString(Config.serializer(), config)
+            val serializedConfig = json.encodeToString(config)
             withContext(Dispatchers.IO) {
                 path.toFile().bufferedWriter().use { it.write(serializedConfig) }
             }

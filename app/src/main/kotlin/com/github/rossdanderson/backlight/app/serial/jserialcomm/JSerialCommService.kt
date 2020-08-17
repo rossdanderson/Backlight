@@ -29,15 +29,15 @@ class JSerialCommService(scope: CoroutineScope) : ISerialService {
     sealed class ConnectionActorMessage {
         data class Connect(
             val descriptivePortName: String,
-            val response: CompletableDeferred<ConnectResult>
+            val response: CompletableDeferred<ConnectResult>,
         ) : ConnectionActorMessage()
 
         data class Disconnect(
-            val response: CompletableJob
+            val response: CompletableJob,
         ) : ConnectionActorMessage()
 
         data class SendMessage(
-            val message: Message
+            val message: Message,
         ) : ConnectionActorMessage()
     }
 

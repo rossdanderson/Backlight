@@ -6,13 +6,13 @@ import com.github.rossdanderson.backlight.app.data.UColor
 import com.github.rossdanderson.backlight.app.messages.Header.WRITE_LED
 
 inline class WriteLEDMessage(
-    override val backingArray: UByteArray
+    override val backingArray: UByteArray,
 ) : Message {
     constructor(
         index: UByte,
         red: UByte,
         green: UByte,
-        blue: UByte
+        blue: UByte,
     ) : this(
         ubyteArrayOf(
             WRITE_LED.toUByte(),

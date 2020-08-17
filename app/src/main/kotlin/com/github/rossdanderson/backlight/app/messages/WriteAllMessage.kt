@@ -6,12 +6,12 @@ import com.github.rossdanderson.backlight.app.data.UColor
 import com.github.rossdanderson.backlight.app.messages.Header.WRITE_ALL
 
 inline class WriteAllMessage(
-    override val backingArray: UByteArray
+    override val backingArray: UByteArray,
 ) : Message {
 
     companion object {
         operator fun invoke(
-            colors: Iterable<UColor>
+            colors: Iterable<UColor>,
         ): WriteAllMessage {
             val uByteArray = UByteArray(colors.count() * 3 + 1)
             uByteArray[0] = WRITE_ALL.toUByte()

@@ -10,7 +10,7 @@ import com.github.rossdanderson.backlight.app.messages.Message
 import kotlinx.coroutines.channels.SendChannel
 
 class MessageListener(
-    private val sendChannel: SendChannel<Message>
+    private val sendChannel: SendChannel<Message>,
 ) : SerialPortMessageListener {
     override fun delimiterIndicatesEndOfMessage(): Boolean = true
 

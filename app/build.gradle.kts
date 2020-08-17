@@ -9,9 +9,10 @@ plugins {
     kotlin("jvm") version kotlinVersion
     kotlin("kapt") version kotlinVersion
     id("kotlinx-serialization") version kotlinVersion
-    id("org.javamodularity.moduleplugin") version "1.5.0"
-    id("org.openjfx.javafxplugin") version "0.0.8"
+    id("org.openjfx.javafxplugin") version "0.0.9"
 }
+
+val moduleName by extra("com.github.rossdanderson.backlight.app")
 
 group = "com.github.rossdanderson.backlight"
 version = "1.0-SNAPSHOT"
@@ -26,8 +27,8 @@ val kotlinSerializationVersion = "1.0.0-RC"
 val kotlinCoroutinesVersion = "1.3.9"
 val javaFXVersion = "12.0.1"
 val koinVersion = "2.0.1"
-val jSerialCommVersion = "2.5.2"
-val kotlinLoggingVersion = "1.7.6"
+val jSerialCommVersion = "2.6.2"
+val kotlinLoggingVersion = "1.8.3"
 val slf4jVersion = "2.12.1"
 val tornadofxVersion = "2.0.0-SNAPSHOT"
 
@@ -46,14 +47,9 @@ dependencies {
     testImplementation("org.koin:koin-test:$koinVersion")
 }
 
-val moduleName: String by project
-application {
-    mainClassName = "$moduleName/com.github.rossdanderson.backlight.BacklightApplicationKt"
-}
-
 java {
-    targetCompatibility = JavaVersion.VERSION_12
-    sourceCompatibility = JavaVersion.VERSION_12
+    targetCompatibility = JavaVersion.VERSION_14
+    sourceCompatibility = JavaVersion.VERSION_14
 }
 
 javafx {
@@ -81,6 +77,6 @@ idea {
 
 val compileKotlin: KotlinCompile by tasks
 compileKotlin.kotlinOptions {
-    jvmTarget = "12"
+    jvmTarget = "14"
     freeCompilerArgs = listOf("-XXLanguage:+InlineClasses")
 }

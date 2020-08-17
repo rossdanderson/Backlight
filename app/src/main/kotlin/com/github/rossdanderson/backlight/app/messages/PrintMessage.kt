@@ -5,7 +5,7 @@ package com.github.rossdanderson.backlight.app.messages
 import java.nio.charset.Charset
 
 inline class PrintMessage(
-    override val backingArray: UByteArray
+    override val backingArray: UByteArray,
 ) : Message {
 
     val contents: String

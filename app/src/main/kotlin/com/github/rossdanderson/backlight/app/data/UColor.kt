@@ -3,12 +3,12 @@
 package com.github.rossdanderson.backlight.app.data
 
 inline class UColor(
-    private val bgr: UByteArray = UByteArray(3)
+    private val bgr: UByteArray = UByteArray(3),
 ) {
     constructor(
         red: UByte,
         green: UByte,
-        blue: UByte
+        blue: UByte,
     ) : this(ubyteArrayOf(blue, green, red))
 
     val red: UByte
