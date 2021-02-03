@@ -66,7 +66,7 @@ class DaemonJobManager(
         launch {
             configService.configFlow.map { it.defaultPort }.first()?.let {
                 when (serialService.connect(it)) {
-                    is ConnectResult.Failure -> configService.set(Config.defaultPortLens, null)
+                    is ConnectResult.Failure -> configService.set(com.github.rossdanderson.backlight.app.config.Config.defaultPortLens, null)
                 }
             }
         }

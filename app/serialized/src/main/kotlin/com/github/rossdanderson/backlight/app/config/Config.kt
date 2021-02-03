@@ -19,32 +19,32 @@ data class Config(
     val contrastFactor: Double = (259.0 * (contrast + 255.0)) / (255.0 * (259.0 - contrast))
 
     companion object {
-        val defaultPortLens = Lens<Config, String?>(
+        val defaultPortLens = Lens(
             get = Config::defaultPort,
             set = { s, a -> s.copy(defaultPort = a) }
         )
 
-        val minDelayMillisLens = Lens<Config, Long>(
+        val minDelayMillisLens = Lens(
             get = Config::minDelayMillis,
             set = { s, a -> s.copy(minDelayMillis = a) }
         )
 
-        val brightnessLens = Lens<Config, Double>(
+        val brightnessLens = Lens(
             get = Config::brightness,
             set = { s, a -> s.copy(brightness = a) }
         )
 
-        val saturationAlphaLens = Lens<Config, Double>(
+        val saturationAlphaLens = Lens(
             get = Config::saturationAlpha,
             set = { s, a -> s.copy(saturationAlpha = a) }
         )
 
-        val contrastLens = Lens<Config, Double>(
+        val contrastLens = Lens(
             get = Config::contrast,
             set = { s, a -> s.copy(contrast = a) }
         )
 
-        val sampleStepLens = Lens<Config, Int>(
+        val sampleStepLens = Lens(
             get = Config::sampleStep,
             set = { s, a -> s.copy(sampleStep = a) }
         )

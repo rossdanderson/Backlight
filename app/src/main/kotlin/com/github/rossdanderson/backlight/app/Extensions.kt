@@ -3,13 +3,10 @@
 package com.github.rossdanderson.backlight.app
 
 import com.github.rossdanderson.backlight.app.data.UColor
-import javafx.beans.value.ChangeListener
-import javafx.beans.value.ObservableValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import mu.KLogger
@@ -47,14 +44,6 @@ fun <U : Any> Flow<U>.share(scope: CoroutineScope): Flow<U> {
             }
         }
         emitAll(sharedBroadcastChannel.openSubscription())
-    }
-}
-
-fun <T> ObservableValue<T>.asFlow(): Flow<T> = callbackFlow {
-    val listener = ChangeListener<T> { _, _, newValue -> offer(newValue) }
-    addListener(listener)
-    awaitClose {
-        removeListener(listener)
     }
 }
 

@@ -2,6 +2,8 @@
 
 package com.github.rossdanderson.backlight.app
 
+import androidx.compose.desktop.Window
+import androidx.compose.material.MaterialTheme
 import com.github.rossdanderson.backlight.app.application.ApplicationState
 import com.github.rossdanderson.backlight.app.config.ConfigService
 import com.github.rossdanderson.backlight.app.daemon.DaemonJobManager
@@ -10,13 +12,8 @@ import com.github.rossdanderson.backlight.app.screen.IScreenService
 import com.github.rossdanderson.backlight.app.screen.source.dxgi.DXGIScreenService
 import com.github.rossdanderson.backlight.app.serial.jserialcomm.JSerialCommService
 import com.github.rossdanderson.backlight.app.serial.mock.MockSerialService
-import com.github.rossdanderson.backlight.app.ui.MainView
-import javafx.application.Platform
-import javafx.stage.Stage
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.serialization.json.Json
 import mu.KotlinLogging
 import org.koin.core.context.startKoin
@@ -24,20 +21,36 @@ import org.koin.core.logger.Level
 import org.koin.core.logger.Logger
 import org.koin.core.logger.MESSAGE
 import org.koin.dsl.module
-import tornadofx.App
-import tornadofx.DIContainer
-import tornadofx.FX
-import tornadofx.launch
-import kotlin.reflect.KClass
-import kotlin.system.exitProcess
 import kotlin.time.ExperimentalTime
 
+//@ExperimentalTime
+//class BacklightApp : Window(MainView::class) {
+//
+//    init {
+//    }
+//
+//    override fun start(stage: Stage) {
+//        super.start(stage)
+//        stage.iconifiedProperty().asFlow().onEach { applicationState.minimised.value = it }.launchIn(coroutineScope)
+//    }
+//
+//    override fun stop() {
+//        Platform.exit()
+//        exitProcess(0)
+//    }
+//
+//    companion object {
+//    }
+//}
+
+private val logger = KotlinLogging.logger { }
+
 @ExperimentalTime
-class BacklightApp : App(MainView::class) {
+fun main() = Window {
 
-    private val coroutineScope = MainScope()
+    val coroutineScope = MainScope()
 
-    object KoinKotlinLogger : Logger() {
+    val koinKotlinLogger = object : Logger() {
         override fun log(level: Level, msg: MESSAGE) {
             when (level) {
                 Level.DEBUG -> logger.debug { msg }
@@ -47,11 +60,13 @@ class BacklightApp : App(MainView::class) {
         }
     }
 
-    private val applicationState: ApplicationState
+    val applicationState: ApplicationState
 
-    init {
+    MaterialTheme {
+
+
         val koinApplication = startKoin {
-            logger(KoinKotlinLogger)
+            logger(koinKotlinLogger)
 
             environmentProperties()
 
@@ -72,29 +87,12 @@ class BacklightApp : App(MainView::class) {
             )
         }
 
-        FX.dicontainer = object : DIContainer {
-            override fun <T : Any> getInstance(type: KClass<T>): T = koinApplication.koin.get(type, null, null)
-        }
+//        FX.dicontainer = object : DIContainer {
+//            override fun <T : Any> getInstance(type: KClass<T>): T = koinApplication.koin.get(type, null, null)
+//        }
+//
+//        applicationState = koinApplication.koin.get()
 
-        applicationState = koinApplication.koin.get()
     }
 
-    override fun start(stage: Stage) {
-        super.start(stage)
-        stage.iconifiedProperty().asFlow().onEach { applicationState.minimised.value = it }.launchIn(coroutineScope)
-    }
-
-    override fun stop() {
-        Platform.exit()
-        exitProcess(0)
-    }
-
-    companion object {
-        private val logger = KotlinLogging.logger { }
-    }
-}
-
-@ExperimentalTime
-fun main() {
-    launch<BacklightApp>()
 }
