@@ -48,8 +48,9 @@ dependencies {
 }
 
 java {
-    targetCompatibility = JavaVersion.VERSION_14
-    sourceCompatibility = JavaVersion.VERSION_14
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(15))
+    }
 }
 
 javafx {
