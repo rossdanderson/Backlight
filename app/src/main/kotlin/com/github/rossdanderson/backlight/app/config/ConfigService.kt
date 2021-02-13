@@ -19,7 +19,7 @@ import mu.KotlinLogging
 import java.nio.file.Paths
 import kotlin.time.ExperimentalTime
 
-@ExperimentalTime
+@OptIn(ExperimentalTime::class)
 class ConfigService(
     private val json: Json,
 ) {
@@ -30,7 +30,7 @@ class ConfigService(
         private val path = Paths.get("${System.getProperty("user.home")}/.backlight.json").toAbsolutePath()
     }
 
-    private val _configFlow: MutableStateFlow<com.github.rossdanderson.backlight.app.config.Config>
+    private val _configFlow: MutableStateFlow<Config>
 
     init {
         val file = path.toFile()
@@ -38,22 +38,22 @@ class ConfigService(
             runCatching {
                 file.bufferedReader().use {
                     val text = it.readText()
-                    val config = json.decodeFromString<com.github.rossdanderson.backlight.app.config.Config>(text)
+                    val config = json.decodeFromString<Config>(text)
                     logger.info { "Loaded $config" }
                     config
                 }
             }.getOrElse {
                 logger.warn(it) { "Unable to load config from $path - using defaults" }
-                com.github.rossdanderson.backlight.app.config.Config()
+                Config()
             }
         } else {
             logger.info { "No config found at $path - using defaults" }
-            com.github.rossdanderson.backlight.app.config.Config()
+            Config()
         }
         _configFlow = MutableStateFlow(config)
     }
 
-    val configFlow: StateFlow<com.github.rossdanderson.backlight.app.config.Config>
+    val configFlow: StateFlow<Config>
         get() = _configFlow
 
     suspend fun <T> modify(lens: Lens<Config, T>, mutator: (T) -> T) {
@@ -80,7 +80,7 @@ class ConfigService(
         }
     }
 
-    private suspend fun persistAndPublish(config: com.github.rossdanderson.backlight.app.config.Config) {
+    private suspend fun persistAndPublish(config: Config) {
         withContext(NonCancellable) {
             logger.info { "Persisting $config" }
             val serializedConfig = json.encodeToString(config)
@@ -91,7 +91,7 @@ class ConfigService(
         }
     }
 
-    private suspend fun publish(config: com.github.rossdanderson.backlight.app.config.Config) {
+    private suspend fun publish(config: Config) {
         withContext(NonCancellable) {
             logger.info { "Publishing $config" }
             _configFlow.value = config

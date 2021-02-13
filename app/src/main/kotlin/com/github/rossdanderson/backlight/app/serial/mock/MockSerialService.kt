@@ -19,7 +19,7 @@ import kotlin.random.Random
 import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
 
-@ExperimentalTime
+@OptIn(ExperimentalTime::class)
 class MockSerialService : ISerialService {
 
     private val logger = KotlinLogging.logger {}

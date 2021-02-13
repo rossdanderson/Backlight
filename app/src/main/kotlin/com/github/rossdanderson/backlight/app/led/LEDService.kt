@@ -16,9 +16,7 @@ import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.flow.*
 import java.lang.Double.max
 import kotlin.math.sqrt
-import kotlin.time.ExperimentalTime
 
-@ExperimentalTime
 class LEDService(
     private val screenService: IScreenService,
     configService: ConfigService,

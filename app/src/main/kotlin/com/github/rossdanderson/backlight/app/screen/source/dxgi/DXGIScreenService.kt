@@ -1,5 +1,3 @@
-@file:Suppress("EXPERIMENTAL_API_USAGE")
-
 package com.github.rossdanderson.backlight.app.screen.source.dxgi
 
 import com.github.rossdanderson.backlight.app.config.ConfigService
@@ -22,7 +20,7 @@ import kotlin.time.*
 
 private const val success = 0
 
-@ExperimentalTime
+@OptIn(ExperimentalTime::class, ExperimentalUnsignedTypes::class)
 class DXGIScreenService(
     configService: ConfigService,
 ) : IScreenService {
@@ -33,6 +31,7 @@ class DXGIScreenService(
     private val sampleStepFlow = configService.configFlow
         .map { config -> config.sampleStep }
         .distinctUntilChanged()
+
 
     override val screenFlow: Flow<ScreenData> =
         flow {
